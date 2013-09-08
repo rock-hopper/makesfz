@@ -1,0 +1,231 @@
+#!/bin/bash
+#
+# 'makesfz' by Dan MacDonald 2012, modified by RockHopper 2013
+#
+# By default, running 'makesfz' with no arguments creates individual .sfz files
+# for every .wav file found in the current directory. Samples are mapped across the 
+# entire keyboard with pitch_keycenter set to MIDI key C4 (middle C).
+#
+# Alternatively, running 'makesfz -s' creates a single .sfz file named after the
+# current directory. Each .wav file found is mapped to its own MIDI key, by default
+# starting at C4.
+#
+# For a full list of options, run 'makesfz -h'
+#
+# This script is public domain and provided 'as-is', without any express or implied 
+# warranty. In no event will the authors be held liable for any damages arising from 
+# the use of this software.
+
+
+args=("$@")
+numArgs=$#
+
+isKeySet=false
+isSingle=false
+loopMode="no_loop"
+filetype="wav"
+singleFileName="${PWD##*/}"
+
+let lochan=1
+let hichan=16
+let lokey=0
+let hikey=127
+let keycenter=60
+let key=60
+let KEY_MAX=127
+let KEY_MIN=0
+let returnVal=0
+
+
+function showHelp {
+    echo -e "\nUsage: makesfz [OPTION]...\n"
+    echo -e "By default, running 'makesfz' with no arguments creates individual\n.sfz files for every .wav file found in the current directory.\nSamples are mapped across the entire keyboard with pitch_keycenter\nset to MIDI key C4 (middle C).\n"
+    
+    echo -e "Options:"
+    echo -e "  -s, --single\t\tcreates a single .sfz file named after the\n\t\t\tcurrent directory. Each .wav file found is\n\t\t\tmapped to its own MIDI key (starting at C4\n\t\t\tby default)"
+    echo -e "  -n, --name \"NAME\"\toutput file name; ignored unless used with -s"
+    echo -e "      --lk=KEY,\t\tset lokey. KEY must be 0 - 127 or C-1 - G9\n      --lokey=KEY\t(# or b allowed). Ignored when used with\n\t\t\t-s option"
+    echo -e "      --hk=KEY,\t\tset hikey. KEY must be 0 - 127 or C-1 - G9\n      --hikey=KEY\t(# or b allowed). Ignored when used with\n\t\t\t-s option"
+    echo -e "      --kc=KEY,\t\tset pitch_keycenter. KEY must be 0 - 127\n      --keycenter=KEY\tor C-1 - G9 (# or b allowed). Ignored when\n\t\t\tused with -s option"
+    echo -e "  -k, --key=KEY\t\toverrides --lk, --hk, and --kc, setting lokey,\n\t\t\thikey, and pitch_keycenter to KEY.\n\t\t\tWhen used with -s option, each .wav file is\n\t\t\tmapped to its own MIDI key starting at KEY"
+    echo -e "  -1, --one-shot\tset loop_mode to one_shot"
+    echo -e "  -m, --midi=CHAN\tset midi channel. CHAN must be 1 - 16 or\n\t\t\tall (default)"
+    echo -e "  -o, --ogg\t\tsearch for *.ogg instead of *.wav files"
+    echo -e "  -h, --help\t\tdisplay this help and exit\n"
+    exit 0
+}
+
+
+function showInvalidKeyError {
+    echo "Key must be in the range C-1 to G9"
+    exit 1
+}
+
+
+function checkKeyIsValid {
+    local input=$1
+    local let key=0
+
+    # check if user input is a valid key name
+    if [[ $input =~ ^[a-gA-G](#|b)?(-1|[0-9])$ ]]; then
+        case "${input:0:1}" in
+            [cC] )  key=0;;
+            [dD] )  key=2;;
+            [eE] )  key=4;;
+            [fF] )  key=5;;
+            [gG] )  key=7;;
+            [aA] )  key=9;;
+            [bB] )  key=11;;
+        esac
+
+        local let numChars=`expr length $input`
+        local let i=0
+        for ((i=1; i < numChars; i++)); do
+            if [ "${input:$i:1}" == "#" ]; then
+                (( key++ ))
+            fi
+            if [ "${input:$i:1}" == "b" ]; then
+                (( key-- ))
+            fi
+            if [ "${input:$i:1}" == "-" ]; then
+                (( key -= 24 ))
+            fi
+        done
+
+        local let octave=${input:(-1)}
+        (( key += 12 * (octave + 1) ))
+
+        if [ $key -lt $KEY_MIN ] || [ $key -gt $KEY_MAX ]; then
+            showInvalidKeyError
+        fi
+
+        returnVal=$key
+
+    # check if user input is a valid key number
+    elif [[ $input =~ ^([0-9]|[1-9][0-9]|1[0-2][0-9])$ ]]; then
+        key=$input
+        if [ $key -gt $KEY_MAX ]; then
+            showInvalidKeyError
+        fi
+        returnVal=$key
+
+    else
+        showInvalidKeyError
+    fi
+}
+
+
+function setLoKey {
+    checkKeyIsValid $1
+    lokey=$returnVal
+}
+
+
+function setHiKey {
+    checkKeyIsValid $1
+    hikey=$returnVal
+}
+
+
+function setKeyCenter {
+    checkKeyIsValid $1
+    keycenter=$returnVal
+}
+
+
+function setKey {
+    checkKeyIsValid $1
+    key=$returnVal
+    isKeySet=true
+}
+
+
+function setMidiChan {
+    local input=$1
+
+    # check user input is valid (1 to 16)
+    if [[ $input =~ ^([1-9]|1[0-6])$ ]]; then
+        lochan=$input
+        hichan=$input
+    elif [[ $input =~ ^(all|ALL)$ ]]; then
+        lochan=1
+        hichan=16
+    else
+        echo "MIDI channel must be '1 - 16' or 'all'"
+        exit 1
+    fi
+}
+
+
+if [ $numArgs -gt 0 ]; then
+    let i=0
+    while [ $i -lt $numArgs ]; do
+        case ${args[$i]} in
+            -s )            isSingle=true;;
+            --single )      isSingle=true;;
+            -n )            (( i++ )); singleFileName=${args[$i]};;
+            --name )        (( i++ )); singleFileName=${args[$i]};;
+            --lk=* )        setLoKey ${args[$i]:5};;
+            --lokey=* )     setLoKey ${args[$i]:8};;
+            --hk=* )        setHiKey ${args[$i]:5};;
+            --hikey=* )     setHiKey ${args[$i]:8};;
+            --kc=* )        setKeyCenter ${args[$i]:5};;
+            --keycenter=* ) setKeyCenter ${args[$i]:12};;
+            -k=* )          setKey ${args[$i]:3};;
+            --key=* )       setKey ${args[$i]:6};;
+            -1 )            loopMode="one_shot";;
+            --oneshot )     loopMode="one_shot";;
+            -m=* )          setMidiChan ${args[$i]:3};;
+            --midi=* )      setMidiChan ${args[$i]:7};;
+            -o )            filetype="ogg";;
+            --ogg )         filetype="ogg";;
+            -h )            showHelp;;
+            --help )        showHelp;;
+            * )             echo "Invalid option: ${args[$i]}. See 'makesfz -h' for usage"; exit 1;;
+        esac
+        (( i++ ))
+    done
+fi
+
+if [ $lokey -gt $hikey ]; then
+    echo "lokey can't be higher than hikey"
+    exit 1
+fi
+
+if $isSingle; then
+    echo -e "# This file was auto-generated by makesfz\n\n<group>\nloop_mode=$loopMode\n" > "$singleFileName".sfz
+
+    for filename in *.$filetype; do
+        if [ "$filename" = "*.$filetype" ]; then
+            echo "No *.$filetype files found in current directory!"
+            rm -f "$singleFileName".sfz
+            exit 1
+        fi
+
+        if [ $key -gt $KEY_MAX ]; then
+            echo "Ran out of keys! Try assigning first sample to a lower key"
+            rm -f "$singleFileName".sfz
+            exit 1
+        fi
+        echo -e "<region>\nsample=$filename\nkey=$key\nlovel=0 hivel=127\nlochan=$lochan hichan=$hichan\n" >> "$singleFileName".sfz
+        (( key++ ))
+    done
+else
+    for filename in *.$filetype; do
+        if [ "$filename" = "*.$filetype" ]; then
+            echo "No *.$filetype files found in current directory!"
+            exit 1
+        fi
+
+        echo -e "# This file was auto-generated by makesfz\n\n<group>\nloop_mode=$loopMode\n" > "${filename%.$filetype}".sfz
+        echo -e "<region>\nsample=$filename" >> "${filename%.$filetype}".sfz
+
+        if $isKeySet; then
+            echo -e "key=$key" >> "${filename%.$filetype}".sfz
+        else
+            echo -e "lokey=$lokey hikey=$hikey\npitch_keycenter=$keycenter" >> "${filename%.$filetype}".sfz
+        fi
+
+        echo -e "lovel=0 hivel=127\nlochan=$lochan hichan=$hichan" >> "${filename%.$filetype}".sfz
+    done
+fi
