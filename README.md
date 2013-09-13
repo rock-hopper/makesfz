@@ -36,4 +36,4 @@ Near the top of the script are variables that may be modified if makesfz is inst
     MAKESFZ_FILEPATH="makesfz"
     TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
 
-Once downloaded, make the script executable then move it to /usr/share/nautilus-scripts if Nautilus Scripts Manager is installed or to ~/.gnome2/nautilus-scripts to make the script permanently available.
+Once downloaded, make the script executable then move it to /usr/share/nautilus-scripts if Nautilus Scripts Manager is installed or to ~/.gnome2/nautilus-scripts to make the script always available.
