@@ -30,3 +30,15 @@ Once downloaded, make the script executable (e.g. right click the file and selec
 or
 
     sudo cp makesfz /usr/bin
+
+___
+
+Make SFZ
+========
+
+This is a Nautilus script to invoke 'makesfz'. It assumes that makesfz is installed in /usr/bin and that xterm is available.
+
+Near the top of the script are variables that may be modified if makesfz is installed somewhere other than /usr/bin or if you wish to use a terminal emulator other than xterm:
+
+    MAKESFZ_FILEPATH="makesfz"
+    TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
