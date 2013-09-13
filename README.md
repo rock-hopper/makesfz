@@ -23,14 +23,7 @@ For full list of available options:
 
     makesfz -h
 
-Once downloaded, make the script executable (e.g. right click the file and select Properties->Permissions) then copy to /usr/bin with:
-
-    su -c 'cp makesfz /usr/bin'
-
-or
-
-    sudo cp makesfz /usr/bin
-
+Once downloaded, make the script executable (e.g. right click the file and select Properties->Permissions) then move it to /usr/bin
 ___
 
 Make SFZ
