@@ -1,0 +1,115 @@
+#!/bin/bash
+#
+# 'Make SFZ' by RockHopper 2013
+#
+# This is a Nautilus script to invoke 'makesfz'. It assumes that makesfz is
+# installed in /usr/bin and that xterm is available.
+#
+# This script is public domain and provided 'as-is', without any express or implied 
+# warranty. In no event will the author be held liable for any damages arising from 
+# the use of this software.
+
+
+# These variables may be modified if makesfz is installed somewhere other than /usr/bin
+# or if you wish to use a different terminal emulator
+
+MAKESFZ_FILEPATH="makesfz"
+TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
+
+# N.B. For a list of available fonts in xterm type: appres XTerm | grep VT100.font
+##################################################################################
+
+
+commandToExec='function setTextColour { tput setf $1; }; let CYAN=3; let RED=4; let YELLOW=6; let WHITE=7; '
+commandToExec+='function startUnderline { tput smul; }; function stopUnderline { tput rmul; }; '
+commandToExec+='function moveCursorUpOneLine { tput cuu1; }; '
+commandToExec+='args=""; '
+
+
+commandToExec+='setTextColour $YELLOW; startUnderline; echo -e "\nMake SFZ\n"; stopUnderline; setTextColour $WHITE; '
+
+commandToExec+='echo -e "This script will scan the current directory for compatible audio files\nand auto-generate one or more .sfz file(s) which can be imported into,\nfor example, LinuxSampler.\n\nMake SFZ can create individual .sfz files for each audio file in the\ncurrent directory. Alternatively, it can create a single .sfz file in\nwhich every audio file in the current directory is mapped to its own key.\n"; '
+
+commandToExec+='echo -e "Please enter the following details or simply press enter to accept the\ndefault values...\n"; '
+
+
+# create a single file?
+commandToExec+='echo "Do you want to create a single .sfz file? (default is no):"; setTextColour $CYAN; read -e isSingleFile; '
+commandToExec+='if [[ $isSingleFile == "" ]]; then isSingleFile="no"; moveCursorUpOneLine; echo "$isSingleFile"; fi; setTextColour $WHITE; '
+
+# if isSingleFile == yes
+commandToExec+='if [[ $isSingleFile == [yY] ]] || [[ $isSingleFile == [yY][eE][sS] ]]; then '
+
+commandToExec+='echo "Name of .sfz file (default is name of current directory, \"${PWD##*/}\"):"; setTextColour $CYAN; read -e fileName; '
+commandToExec+='if [[ $fileName == "" ]]; then fileName="${PWD##*/}"; moveCursorUpOneLine; echo "$fileName"; fi; setTextColour $WHITE; '
+
+commandToExec+='echo "Start key (0 to 127, or C-1 to G9, # or b allowed) (default is C4):"; setTextColour $CYAN; read -e key; '
+commandToExec+='if [[ $key == "" ]]; then key="C4"; moveCursorUpOneLine; echo "$key"; fi; setTextColour $WHITE; '
+
+commandToExec+='args+="-s -k=$key"; '
+
+# else if isSingleFile == no
+commandToExec+='elif [[ $isSingleFile == [nN] ]] || [[ $isSingleFile == [nN][oO] ]]; then '
+
+commandToExec+='echo "Lowest key (0 to 127, or C-1 to G9, # or b allowed) (default is C-1):"; setTextColour $CYAN; read -e lokey; '
+commandToExec+='if [[ $lokey == "" ]]; then lokey="C-1"; moveCursorUpOneLine; echo "$lokey"; fi; setTextColour $WHITE; '
+
+commandToExec+='echo "Highest key (0 to 127, or C-1 to G9, # or b allowed) (default is G9):"; setTextColour $CYAN; read -e hikey; '
+commandToExec+='if [[ $hikey == "" ]]; then hikey="G9"; moveCursorUpOneLine; echo "$hikey"; fi; setTextColour $WHITE; '
+
+commandToExec+='echo "Pitch key center (0 to 127, or C-1 to G9, # or b allowed) (default is C4):"; setTextColour $CYAN; read -e keycenter; '
+commandToExec+='if [[ $keycenter == "" ]]; then keycenter="C4"; moveCursorUpOneLine; echo "$keycenter"; fi; setTextColour $WHITE; '
+
+commandToExec+='args+="--lk=$lokey --hk=$hikey --kc=$keycenter"; '
+
+# else isSingleFile is random gibberish
+commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isSingleFile"; exit 1; fi; '
+
+
+# scan for ogg files?
+commandToExec+='echo "Do you want to scan for .ogg rather than .wav files? (default is no):"; setTextColour $CYAN; read -e isOggWanted; '
+commandToExec+='if [[ $isOggWanted == "" ]]; then isOggWanted="no"; moveCursorUpOneLine; echo "$isOggWanted"; fi; setTextColour $WHITE; '
+
+# if isOggWanted == yes
+commandToExec+='if [[ $isOggWanted == [yY] ]] || [[ $isOggWanted == [yY][eE][sS] ]]; then '
+commandToExec+='args+=" -o"; '
+
+# else if isOggWanted == no
+commandToExec+='elif [[ $isOggWanted == [nN] ]] || [[ $isOggWanted == [nN][oO] ]]; then '
+commandToExec+='args+=""; '
+
+# else isOggWanted is random gibberish
+commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isOggWanted"; exit 1; fi; '
+
+
+# enable one-shot?
+commandToExec+='echo "Enable one-shot? (default is no):"; setTextColour $CYAN; read -e isOneShotWanted; '
+commandToExec+='if [[ $isOneShotWanted == "" ]]; then isOneShotWanted="no"; moveCursorUpOneLine; echo "$isOneShotWanted"; fi; setTextColour $WHITE; '
+
+# if isOneShotWanted == yes
+commandToExec+='if [[ $isOneShotWanted == [yY] ]] || [[ $isOneShotWanted == [yY][eE][sS] ]]; then '
+commandToExec+='args+=" -1"; '
+
+# else if isOneShotWanted == no
+commandToExec+='elif [[ $isOneShotWanted == [nN] ]] || [[ $isOneShotWanted == [nN][oO] ]]; then '
+commandToExec+='args+=""; '
+
+# else isOneShotWanted is random gibberish
+commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isOneShotWanted"; exit 1; fi; '
+
+
+# set MIDI channel
+commandToExec+='echo "Set MIDI channel (1 - 16, or all) (default is \"all\"):"; setTextColour $CYAN; read -e midiChan; '
+commandToExec+='if [[ $midiChan == "" ]]; then midiChan="all"; moveCursorUpOneLine; echo "$midiChan"; fi; setTextColour $WHITE; '
+commandToExec+='args+=" -m=$midiChan"; '
+
+
+# run makesfz
+commandToExec+='echo; setTextColour $RED; '
+commandToExec+="$MAKESFZ_FILEPATH "
+commandToExec+='$args -n "$fileName"; '
+commandToExec+='if [ $? -eq 0 ]; then setTextColour $YELLOW; echo -e "All done!"; fi'
+
+
+$TERMINAL_COMMAND "$commandToExec"
+
