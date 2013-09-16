@@ -66,20 +66,10 @@ commandToExec+='args+="--lk=$lokey --hk=$hikey --kc=$keycenter"; '
 commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isSingleFile"; exit 1; fi; '
 
 
-# scan for ogg files?
-commandToExec+='echo "Do you want to scan for .ogg rather than .wav files? (default is no):"; setTextColour $CYAN; read -e isOggWanted; '
-commandToExec+='if [[ $isOggWanted == "" ]]; then isOggWanted="no"; moveCursorUpOneLine; echo "$isOggWanted"; fi; setTextColour $WHITE; '
-
-# if isOggWanted == yes
-commandToExec+='if [[ $isOggWanted == [yY] ]] || [[ $isOggWanted == [yY][eE][sS] ]]; then '
-commandToExec+='args+=" -o"; '
-
-# else if isOggWanted == no
-commandToExec+='elif [[ $isOggWanted == [nN] ]] || [[ $isOggWanted == [nN][oO] ]]; then '
-commandToExec+='args+=""; '
-
-# else isOggWanted is random gibberish
-commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isOggWanted"; exit 1; fi; '
+# audio file format
+commandToExec+='echo "Audio file format (wav (default), flac, or ogg):"; setTextColour $CYAN; read -e format; '
+commandToExec+='if [[ $format == "" ]]; then format="wav"; moveCursorUpOneLine; echo "$format"; fi; setTextColour $WHITE; '
+commandToExec+='args+=" -f=$format"; '
 
 
 # enable one-shot?
@@ -112,4 +102,5 @@ commandToExec+='if [ $? -eq 0 ]; then setTextColour $YELLOW; echo -e "All done!"
 
 
 $TERMINAL_COMMAND "$commandToExec"
+
 

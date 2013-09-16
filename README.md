@@ -9,7 +9,7 @@ By default, running 'makesfz' with no arguments creates individual .sfz files fo
 
 Alternatively, running 'makesfz -s' creates a single .sfz file named after the current directory. Each .wav file found is mapped to its own MIDI key, by default starting at C4.
 
-The script also allows a key range and the "key center" to be specified, a specific MIDI channel can be set, and either wav or ogg files can be used. Keys can be either the key name (# or b allowed) or MIDI key number.
+The script also allows a key range and the "key center" to be specified, a specific MIDI channel can be set, and wav, flac, or ogg files can be used. Keys can be either the key name (# or b allowed) or MIDI key number.
 
 For example, to set a key range from C2 - C5:
 
