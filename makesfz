@@ -50,7 +50,7 @@ function showHelp {
     echo -e "  -k, --key=KEY\t\toverrides --lk, --hk, and --kc, setting lokey,\n\t\t\thikey, and pitch_keycenter to KEY.\n\t\t\tWhen used with -s option, each .wav file is\n\t\t\tmapped to its own MIDI key starting at KEY"
     echo -e "  -1, --one-shot\tset loop_mode to one_shot"
     echo -e "  -m, --midi=CHAN\tset midi channel. CHAN must be 1 - 16 or\n\t\t\tall (default)"
-    echo -e "  -o, --ogg\t\tsearch for *.ogg instead of *.wav files"
+    echo -e "  -f, --format=FORMAT\tformat of audio files to scan for:\n\t\t\twav (default), flac, or ogg"
     echo -e "  -h, --help\t\tdisplay this help and exit\n"
     exit 0
 }
