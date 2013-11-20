@@ -52,7 +52,6 @@ function showHelp {
     echo -e "  -m, --midi=CHAN\tset midi channel. CHAN must be 1 - 16 or\n\t\t\tall (default)"
     echo -e "  -f, --format=FORMAT\tformat of audio files to scan for:\n\t\t\twav (default), flac, or ogg"
     echo -e "  -h, --help\t\tdisplay this help and exit\n"
-    exit 0
 }
 
 
@@ -192,8 +191,8 @@ if [ $numArgs -gt 0 ]; then
             --midi=* )      setMidiChan ${args[$i]:7};;
             -f=* )          setFileType ${args[$i]:3};;
             --format=* )    setFileType ${args[$i]:9};;
-            -h )            showHelp;;
-            --help )        showHelp;;
+            -h )            showHelp; exit 0;;
+            --help )        showHelp; exit 0;;
             * )             echo "Invalid option: ${args[$i]}. See 'makesfz -h' for usage"; exit 1;;
         esac
         (( i++ ))
