@@ -17,53 +17,80 @@
 # the use of this software.
 
 
-args=("$@")
-numArgs=$#
+declare -ra ARGS=("$@")
+declare -ri NUM_ARGS=$#
 
-isKeySet=false
-isSingleFile=false
-loopMode="no_loop"
-fileType="wav"
-singleFileName="${PWD##*/}"
+declare isKeySet=false
+declare isSingleFile=false
 
-let lochan=1
-let hichan=16
-let lokey=0
-let hikey=127
-let keycenter=60
-let key=60
-let KEY_MAX=127
-let KEY_MIN=0
-let returnVal=0
+declare loopMode="no_loop"
+declare fileType="wav"
+declare singleFileName="${PWD##*/}"
+
+declare -i lochan=1
+declare -i hichan=16
+declare -i lokey=0
+declare -i hikey=127
+declare -i keycenter=60
+declare -i key=60
+declare -i KEY_MAX=127
+declare -i KEY_MIN=0
+declare -i returnVal=0
 
 
-function showHelp {
-    echo -e "\nUsage: makesfz [OPTION]...\n"
-    echo -e "By default, running 'makesfz' with no arguments creates individual\n.sfz files for every .wav file found in the current directory.\nSamples are mapped across the entire keyboard with pitch_keycenter\nset to MIDI key C4 (middle C).\n"
+function showHelp() 
+{
+    cat << EOF
+
+Usage: makesfz [OPTION]...
+
+By default, running makesfz with no arguments creates individual
+sfz files for every wav file found in the current directory.
+Samples are mapped across the entire keyboard with pitch_keycenter
+set to MIDI key C4 (middle C).
     
-    echo -e "Options:"
-    echo -e "  -s, --single\t\tcreates a single .sfz file named after the\n\t\t\tcurrent directory. Each .wav file found is\n\t\t\tmapped to its own MIDI key (starting at C4\n\t\t\tby default)"
-    echo -e "  -n, --name \"NAME\"\toutput file name; ignored unless used with -s"
-    echo -e "      --lk=KEY,\t\tset lokey. KEY must be 0 - 127 or C-1 - G9\n      --lokey=KEY\t(# or b allowed). Ignored when used with\n\t\t\t-s option"
-    echo -e "      --hk=KEY,\t\tset hikey. KEY must be 0 - 127 or C-1 - G9\n      --hikey=KEY\t(# or b allowed). Ignored when used with\n\t\t\t-s option"
-    echo -e "      --kc=KEY,\t\tset pitch_keycenter. KEY must be 0 - 127\n      --keycenter=KEY\tor C-1 - G9 (# or b allowed). Ignored when\n\t\t\tused with -s option"
-    echo -e "  -k, --key=KEY\t\toverrides --lk, --hk, and --kc, setting lokey,\n\t\t\thikey, and pitch_keycenter to KEY.\n\t\t\tWhen used with -s option, each .wav file is\n\t\t\tmapped to its own MIDI key starting at KEY"
-    echo -e "  -1, --one-shot\tset loop_mode to one_shot"
-    echo -e "  -m, --midi=CHAN\tset midi channel. CHAN must be 1 - 16 or\n\t\t\tall (default)"
-    echo -e "  -f, --format=FORMAT\tformat of audio files to scan for:\n\t\t\twav (default), flac, or ogg"
-    echo -e "  -h, --help\t\tdisplay this help and exit\n"
+Options:
+  -s, --single          Creates a single sfz file named after the
+                        current directory. Each wav file found is
+                        mapped to its own MIDI key (starting at C4
+                        by default)
+  -n, --name 'NAME'     Output file name; ignored unless used with 
+                        -s option
+      --lk=KEY,         Set lokey. KEY must be 0 - 127 or C-1 - G9
+      --lokey=KEY       (# or b allowed). Ignored when used with
+                        -s option
+      --hk=KEY,         Set hikey. KEY must be 0 - 127 or C-1 - G9
+      --hikey=KEY       (# or b allowed). Ignored when used with
+                        -s option
+      --kc=KEY,         Set pitch_keycenter. KEY must be 0 - 127
+      --keycenter=KEY   or C-1 - G9 (# or b allowed). Ignored when
+                        used with -s option
+  -k, --key=KEY         Overrides --lk, --hk, and --kc, setting lokey,
+                        hikey, and pitch_keycenter to KEY.
+                        When used with -s option, each wav file is
+                        mapped to its own MIDI key starting at KEY
+  -1, --one-shot        Set loop_mode to one_shot
+  -m, --midi=CHAN       Set midi channel. CHAN must be 1 - 16 or
+                        all (default)
+  -f, --format=FORMAT   Format of audio files to scan for:
+                        wav (default), flac, or ogg
+  -h, --help            Display this help and exit
+
+EOF
 }
 
 
-function showInvalidKeyError {
+function showInvalidKeyError() 
+{
     echo "Key must be in the range C-1 to G9"
     exit 1
 }
 
 
-function checkKeyIsValid {
-    local input=$1
-    local let key=0
+function checkKeyIsValid() 
+{
+    declare input=$1
+    declare -i key=0
 
     # check if user input is a valid key name
     if [[ $input =~ ^[a-gA-G](#|b)?(-1|[0-9])$ ]]; then
@@ -114,13 +141,15 @@ function checkKeyIsValid {
 }
 
 
-function setLoKey {
+function setLoKey() 
+{
     checkKeyIsValid $1
     lokey=$returnVal
 }
 
 
-function setHiKey {
+function setHiKey() 
+{
     checkKeyIsValid $1
     hikey=$returnVal
 }
@@ -132,15 +161,17 @@ function setKeyCenter {
 }
 
 
-function setKey {
+function setKey() 
+{
     checkKeyIsValid $1
     key=$returnVal
     isKeySet=true
 }
 
 
-function setMidiChan {
-    local input=$1
+function setMidiChan() 
+{
+    declare input=$1
 
     # check user input is valid (1 to 16)
     if [[ $input =~ ^([1-9]|1[0-6])$ ]]; then
@@ -156,8 +187,9 @@ function setMidiChan {
 }
 
 
-function setFileType {
-    local input=$1
+function setFileType() 
+{
+    declare input=$1
 
     # check if user input is a valid file type
     case "$input" in
@@ -169,35 +201,42 @@ function setFileType {
 }
 
 
-if [ $numArgs -gt 0 ]; then
-    let i=0
-    while [ $i -lt $numArgs ]; do
-        case ${args[$i]} in
-            -s )            isSingleFile=true;;
-            --single )      isSingleFile=true;;
-            -n )            (( i++ )); singleFileName=${args[$i]};;
-            --name )        (( i++ )); singleFileName=${args[$i]};;
-            --lk=* )        setLoKey ${args[$i]:5};;
-            --lokey=* )     setLoKey ${args[$i]:8};;
-            --hk=* )        setHiKey ${args[$i]:5};;
-            --hikey=* )     setHiKey ${args[$i]:8};;
-            --kc=* )        setKeyCenter ${args[$i]:5};;
-            --keycenter=* ) setKeyCenter ${args[$i]:12};;
-            -k=* )          setKey ${args[$i]:3};;
-            --key=* )       setKey ${args[$i]:6};;
-            -1 )            loopMode="one_shot";;
-            --oneshot )     loopMode="one_shot";;
-            -m=* )          setMidiChan ${args[$i]:3};;
-            --midi=* )      setMidiChan ${args[$i]:7};;
-            -f=* )          setFileType ${args[$i]:3};;
-            --format=* )    setFileType ${args[$i]:9};;
-            -h )            showHelp; exit 0;;
-            --help )        showHelp; exit 0;;
-            * )             echo "Invalid option: ${args[$i]}. See 'makesfz -h' for usage"; exit 1;;
-        esac
-        (( i++ ))
-    done
-fi
+function processArgs()
+{
+    declare -i i=0
+
+    if (( NUM_ARGS > 0 )); then
+        while (( i < NUM_ARGS )); do
+            case ${ARGS[$i]} in
+                -s )            isSingleFile=true;;
+                --single )      isSingleFile=true;;
+                -n )            (( i++ )); singleFileName=${args[$i]};;
+                --name )        (( i++ )); singleFileName=${args[$i]};;
+                --lk=* )        setLoKey ${args[$i]:5};;
+                --lokey=* )     setLoKey ${args[$i]:8};;
+                --hk=* )        setHiKey ${args[$i]:5};;
+                --hikey=* )     setHiKey ${args[$i]:8};;
+                --kc=* )        setKeyCenter ${args[$i]:5};;
+                --keycenter=* ) setKeyCenter ${args[$i]:12};;
+                -k=* )          setKey ${args[$i]:3};;
+                --key=* )       setKey ${args[$i]:6};;
+                -1 )            loopMode="one_shot";;
+                --oneshot )     loopMode="one_shot";;
+                -m=* )          setMidiChan ${args[$i]:3};;
+                --midi=* )      setMidiChan ${args[$i]:7};;
+                -f=* )          setFileType ${args[$i]:3};;
+                --format=* )    setFileType ${args[$i]:9};;
+                -h )            showHelp; exit 0;;
+                --help )        showHelp; exit 0;;
+                * )             echo "Invalid option: ${args[$i]}. See 'makesfz -h' for usage"; exit 1;;
+            esac
+            (( i++ ))
+        done
+    fi
+}
+
+
+processArgs
 
 if [ $lokey -gt $hikey ]; then
     echo "lokey can't be higher than hikey"
