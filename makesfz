@@ -231,21 +231,6 @@ function setLayerMarker()
 }
 
 
-function setRandMarker()
-{
-    declare input=$1
-
-    # check if user input is valid
-    case "$input" in
-        [pP][rR][eE][fF][iI][xX] )  randMarker="prefix";;
-        [pP] )                      randMarker="prefix";;
-        [sS][uU][fF][fF][iI][xX] )  randMarker="suffix";;
-        [sS] )                      randMarker="suffix";;
-        * )                         echo "Invalid input: $input. Randomize marker must be prefix, suffix, p, or s"; exit 1;;
-    esac
-}
-
-
 function setSearchPaths()
 {
     declare -i param=$1
@@ -292,8 +277,6 @@ function processArgs()
                 --reverse )     isReverseSortOn=true;;
                 -L )            (( i++ )); setLayerMarker ${ARGS[$i]};;
                 --layers )      (( i++ )); setLayerMarker ${ARGS[$i]};;
-                -R )            (( i++ )); setRandMarker ${ARGS[$i]};;
-                --random )      (( i++ )); setRandMarker ${ARGS[$i]};;
                 -- )            (( i++ )); setSearchPaths $i; break;;
                 -h )            showHelp; exit 0;;
                 --help )        showHelp; exit 0;;
@@ -578,17 +561,6 @@ function findFiles()
     esac
 
     formatInstrNames
-}
-
-
-function calculateF()
-{
-    declare expression=$1
-
-    # scale=4 : round to 4 fractional digits
-    # if(x<1) print 0 : print leading 0
-    # 2>/dev/null : don't print error messages
-    echo $( echo "scale=4; x=$expression; if(x<1) print 0; x" | bc -q 2>/dev/null )
 }
 
 
