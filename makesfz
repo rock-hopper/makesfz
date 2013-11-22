@@ -662,6 +662,17 @@ function createSingleSfzFile()
         (( key++ ))
     done
 
+    if [ -f "$sfzFileName".sfz ]; then
+        echo -e "Warning: A file with the name $sfzFileName.sfz already exists \nDo you want to overwrite it?"
+        read -e input
+        if [[ $input == [yY] ]] || [[ $input == [yY][eE][sS] ]]; then
+            rm -f "$sfzFileName".sfz
+        else
+            echo "Bailing out!"
+            exit 1
+        fi
+    fi
+
     touch "$sfzFileName".sfz
 
     for line in "${textLines[@]}"; do
