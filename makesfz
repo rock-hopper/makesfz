@@ -20,12 +20,26 @@
 declare -ra ARGS=("$@")
 declare -ri NUM_ARGS=$#
 
+declare -ri KEY_MAX=127
+declare -ri KEY_MIN=0
+declare -ri VEL_MAX=127
+
+declare -a instrumentNames
+declare -ia instrNumLayers
+declare -ia instrFilesIndex
+declare -a sampleFilePaths
+declare -a fileSearchPaths
+declare -a dirSearchPaths
+
 declare isKeySet=false
 declare isSingleFile=false
+declare isReverseSortOn=false
 
 declare loopMode="no_loop"
 declare fileType="wav"
-declare singleFileName="${PWD##*/}"
+declare sfzFileName="${PWD##*/}" # SFZ file name defaults to present working directory
+declare layerMarker=""
+declare randMarker=""
 
 declare -i lochan=1
 declare -i hichan=16
@@ -33,8 +47,6 @@ declare -i lokey=0
 declare -i hikey=127
 declare -i keycenter=60
 declare -i key=60
-declare -i KEY_MAX=127
-declare -i KEY_MIN=0
 declare -i returnVal=0
 
 
@@ -155,7 +167,8 @@ function setHiKey()
 }
 
 
-function setKeyCenter {
+function setKeyCenter() 
+{
     checkKeyIsValid $1
     keycenter=$returnVal
 }
@@ -195,9 +208,58 @@ function setFileType()
     case "$input" in
         [wW][aA][vV] )      fileType="wav";;
         [fF][lL][aA][cC] )  fileType="flac";;
-        [oO][oO][gG] )      fileType="ogg";;
+        [oO][gG][gG] )      fileType="ogg";;
         * )                 echo "Invalid input: $input. File type must be wav, flac, or ogg"; exit 1;;
     esac
+}
+
+
+function setLayerMarker()
+{
+    declare input=$1
+
+    # check if user input is valid
+    case "$input" in
+        [dD][iI][rR][sS] )          layerMarker="dirs";;
+        [dD] )                      layerMarker="dirs";;
+        [pP][rR][eE][fF][iI][xX] )  layerMarker="prefix";;
+        [pP] )                      layerMarker="prefix";;
+        [sS][uU][fF][fF][iI][xX] )  layerMarker="suffix";;
+        [sS] )                      layerMarker="suffix";;
+        * )                         echo "Invalid input: $input. Layer marker must be dirs, prefix, or suffix (or d, p, or s)"; exit 1;;
+    esac
+}
+
+
+function setRandMarker()
+{
+    declare input=$1
+
+    # check if user input is valid
+    case "$input" in
+        [pP][rR][eE][fF][iI][xX] )  randMarker="prefix";;
+        [pP] )                      randMarker="prefix";;
+        [sS][uU][fF][fF][iI][xX] )  randMarker="suffix";;
+        [sS] )                      randMarker="suffix";;
+        * )                         echo "Invalid input: $input. Randomize marker must be prefix, suffix, p, or s"; exit 1;;
+    esac
+}
+
+
+function setSearchPaths()
+{
+    declare -i param=$1
+
+    while (( param < NUM_ARGS )); do
+
+        if [ -f "${ARGS[$param]}" ]; then
+            fileSearchPaths+=("${ARGS[$param]}")
+        elif [ -d "${ARGS[$param]}" ] && [ "${ARGS[$param]}" != "." ] && [ "${ARGS[$param]}" != "./" ]; then
+            dirSearchPaths+=("${ARGS[$param]}")
+        fi
+
+        (( param++ ))
+    done
 }
 
 
@@ -210,25 +272,32 @@ function processArgs()
             case ${ARGS[$i]} in
                 -s )            isSingleFile=true;;
                 --single )      isSingleFile=true;;
-                -n )            (( i++ )); singleFileName=${args[$i]};;
-                --name )        (( i++ )); singleFileName=${args[$i]};;
-                --lk=* )        setLoKey ${args[$i]:5};;
-                --lokey=* )     setLoKey ${args[$i]:8};;
-                --hk=* )        setHiKey ${args[$i]:5};;
-                --hikey=* )     setHiKey ${args[$i]:8};;
-                --kc=* )        setKeyCenter ${args[$i]:5};;
-                --keycenter=* ) setKeyCenter ${args[$i]:12};;
-                -k=* )          setKey ${args[$i]:3};;
-                --key=* )       setKey ${args[$i]:6};;
+                -n )            (( i++ )); sfzFileName=${ARGS[$i]};;
+                --name )        (( i++ )); sfzFileName=${ARGS[$i]};;
+                --lk )          (( i++ )); setLoKey ${ARGS[$i]};;
+                --lokey )       (( i++ )); setLoKey ${ARGS[$i]};;
+                --hk )          (( i++ )); setHiKey ${ARGS[$i]};;
+                --hikey )       (( i++ )); setHiKey ${ARGS[$i]};;
+                --kc )          (( i++ )); setKeyCenter ${ARGS[$i]};;
+                --keycenter )   (( i++ )); setKeyCenter ${ARGS[$i]};;
+                -k )            (( i++ )); setKey ${ARGS[$i]};;
+                --key )         (( i++ )); setKey ${ARGS[$i]};;
                 -1 )            loopMode="one_shot";;
                 --oneshot )     loopMode="one_shot";;
-                -m=* )          setMidiChan ${args[$i]:3};;
-                --midi=* )      setMidiChan ${args[$i]:7};;
-                -f=* )          setFileType ${args[$i]:3};;
-                --format=* )    setFileType ${args[$i]:9};;
+                -m )            (( i++ )); setMidiChan ${ARGS[$i]};;
+                --midi )        (( i++ )); setMidiChan ${ARGS[$i]};;
+                -f )            (( i++ )); setFileType ${ARGS[$i]};;
+                --format )      (( i++ )); setFileType ${ARGS[$i]};;
+                -r )            isReverseSortOn=true;;
+                --reverse )     isReverseSortOn=true;;
+                -L )            (( i++ )); setLayerMarker ${ARGS[$i]};;
+                --layers )      (( i++ )); setLayerMarker ${ARGS[$i]};;
+                -R )            (( i++ )); setRandMarker ${ARGS[$i]};;
+                --random )      (( i++ )); setRandMarker ${ARGS[$i]};;
+                -- )            (( i++ )); setSearchPaths $i; break;;
                 -h )            showHelp; exit 0;;
                 --help )        showHelp; exit 0;;
-                * )             echo "Invalid option: ${args[$i]}. See 'makesfz -h' for usage"; exit 1;;
+                * )             echo "Invalid option: ${ARGS[$i]}. See 'makesfz -h' for usage"; exit 1;;
             esac
             (( i++ ))
         done
@@ -236,48 +305,392 @@ function processArgs()
 }
 
 
+# File names may contain any character except for "\0" and "/" so care needs to be taken
+# to prevent file names containing spaces or new lines from being split
+
+
+function getNumMatchingFiles()
+{
+    declare -a searchPaths=("$1")
+
+    if [ "$1" == "." ] || [ "$1" == "./" ]; then
+        searchPaths=("${fileSearchPaths[@]}")
+    fi
+
+    # RS (Record Separator) is set to "/" as "\0" would simply read the entire
+    # input stream as one record. Setting FS (Field Separator) to "\0" is no good
+    # as that would cause individual characters to be treated as fields
+
+    find "${searchPaths[@]}" -maxdepth 1 -type f -iname "*.$fileType" -printf "%f/" | gawk '
+    BEGIN { RS = "/" }  # RS - Record Separator
+    END { print NR }    # NR - No. of Records'
+
+    unset searchPaths
+}
+
+
+function getSortedFileNames()
+{
+    declare -a searchPaths=("$1")
+
+    if [ "$1" == "." ] || [ "$1" == "./" ]; then
+        searchPaths=("${fileSearchPaths[@]}")
+    fi
+
+    declare key1=""
+    declare key2=""
+    declare key3=""
+    declare sortOrder=""
+
+    # File names are sorted by leading digits, trailing digits, and by any characters in between.
+    # The order of the sort keys is dependant on the "layer marker"
+
+    if $isReverseSortOn; then
+        sortOrder="r"
+    fi
+
+    case $layerMarker in
+        dirs )      key1="2,2d";            key2="1,1n$sortOrder";  key3="3,3n$sortOrder";;
+        prefix )    key1="2,2d";            key2="3,3n";            key3="1,1n$sortOrder";;
+        suffix )    key1="2,2d";            key2="1,1n";            key3="3,3n$sortOrder";;
+        * )         key1="2,2d$sortOrder";  key2="1,1n";            key3="3,3n";;
+    esac
+
+    # sort -z appends null terminator instead of a new line
+    # GNU tr won't delete "\0" unless explicitly told to
+
+    find "${searchPaths[@]}" -maxdepth 1 -type f -iname "*.$fileType" -printf "%f/" | gawk '
+    BEGIN {
+        RS = "/"
+        IGNORECASE = 1
+    }
+    {
+        delimFileName = gensub(/(^[0-9]*)(.*[^0-9])([0-9]*[.]'$fileType'$)/, "\\1/\\2/\\3", 1)
+        printf("%s\0", delimFileName)
+    }
+    ' | sort -z -t/ ${key1:+-k "$key1"} ${key2:+-k "$key2"} ${key3:+-k "$key3"} | tr -d '/'
+
+    unset searchPaths
+}
+
+
+function findFilesLayerMarkerDirs()
+{
+    # IFS (Internal Field Separator) is set to null for duration of read operation to prevent
+    # file names containing spaces or new lines from being split
+
+    # Find sub-directories containing audio files 
+    for directory in "${dirSearchPaths[@]}"; do
+        while IFS= read -r -d '' subDir; do
+            numFiles=$( getNumMatchingFiles "$subDir" )
+
+            if (( numFiles > 0 )); then
+                if (( numFiles > VEL_MAX )); then
+                    echo -e "Warning: Instruments can only have $VEL_MAX layers \n$numFiles matching files found in $subDir \nOnly the first $VEL_MAX will be included\n"
+                    numFiles=$VEL_MAX
+                fi
+                instrumentNames+=("${subDir##*/}")
+                instrNumLayers+=($numFiles)
+                instrFilesIndex+=($filesIndex)
+                (( filesIndex += numFiles ))
+
+                # Find audio files in sub-directory
+                layerNum=1
+                while IFS= read -r -d '' fileName; do
+                    if (( layerNum <= VEL_MAX )); then
+                        subDir="${subDir#./}"
+                        filePath="$subDir/$fileName"
+                        sampleFilePaths+=("${filePath//'/'/\\}")
+                        (( layerNum++ ))
+                    fi
+                done < <(getSortedFileNames "$subDir")
+            fi
+        done < <(find "$directory" -maxdepth 1 -type d ! -wholename "$directory" -print0 | sort -z)
+    done
+
+    # Find audio files not in sub-directories
+    findFilesLayerMarkerNone
+}
+
+
+function findFilesLayerMarkerPrefix()
+{
+    declare -i instrID=-1
+    declare -iA instrLayerCounters
+    declare instrName=""
+
+    for directory in "${dirSearchPaths[@]}"; do
+        numFiles=$( getNumMatchingFiles "$directory" )
+
+        if (( numFiles > 0 )); then
+            while IFS= read -r -d '' fileName; do
+
+                # Strip leading digits and file extension from file name
+                instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
+                {
+                    instrName = gensub(/^[0-9]*([^0-9].*)$/, "\\1", 1)
+                    printf("%s", instrName)
+                }')
+
+                # If file belongs to a new instrument rather than a layer of an existing instrument...
+                if [ "${instrLayerCounters[$instrName]}" == "" ]; then
+                    (( instrID++ ))
+                    instrumentNames+=("$instrName")
+                    instrFilesIndex+=($filesIndex)
+                fi
+
+                instrLayerCounters["$instrName"]+=1
+                layerNum=${instrLayerCounters["$instrName"]}
+                if (( layerNum <= VEL_MAX )); then
+                    instrNumLayers[$instrID]=$layerNum
+
+                    if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
+                        filePath="$fileName"
+                    else
+                        filePath="$directory/$fileName"
+                    fi
+                    sampleFilePaths+=("${filePath//'/'/\\}")
+                    (( filesIndex++ ))
+                else
+                    echo -e "Warning: Instruments can only have $VEL_MAX layers \nInstrument \""$( formatInstrName "$instrName" )"\" already has $VEL_MAX layers \n$fileName will not be included\n"
+                fi
+            done < <(getSortedFileNames "$directory")
+        fi
+    done
+}
+
+
+function findFilesLayerMarkerSuffix()
+{
+    declare -i instrID=-1
+    declare -iA instrLayerCounters
+    declare instrName=""
+
+    for directory in "${dirSearchPaths[@]}"; do
+        numFiles=$( getNumMatchingFiles "$directory" )
+
+        if (( numFiles > 0 )); then
+            while IFS= read -r -d '' fileName; do
+
+                # Strip trailing digits and file extension from file name
+                instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
+                {
+                    instrName = gensub(/^(.*[^0-9])[0-9]*$/, "\\1", 1)
+                    printf("%s", instrName)
+                }')
+
+                # If file belongs to a new instrument rather than a layer of an existing instrument...
+                if [ "${instrLayerCounters[$instrName]}" == "" ]; then
+                    (( instrID++ ))
+                    instrumentNames+=("$instrName")
+                    instrFilesIndex+=($filesIndex)
+                fi
+
+                instrLayerCounters["$instrName"]+=1
+                layerNum=${instrLayerCounters["$instrName"]}
+                if (( layerNum <= VEL_MAX )); then
+                    instrNumLayers[$instrID]=$layerNum
+
+                    if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
+                        filePath="$fileName"
+                    else
+                        filePath="$directory/$fileName"
+                    fi
+                    sampleFilePaths+=("${filePath//'/'/\\}")
+                    (( filesIndex++ ))
+                else
+                    echo -e "Warning: Instruments can only have $VEL_MAX layers \nInstrument \""$( formatInstrName "$instrName" )"\" already has $VEL_MAX layers \n$fileName will not be included\n"
+                fi
+            done < <(getSortedFileNames "$directory")
+        fi
+    done
+}
+
+
+function findFilesLayerMarkerNone()
+{
+    for directory in "${dirSearchPaths[@]}"; do
+        numFiles=$( getNumMatchingFiles "$directory" )
+
+        if (( numFiles > 0 )); then
+            while IFS= read -r -d '' fileName; do
+                instrumentNames+=("${fileName%.*}")
+                instrNumLayers+=(1)
+                if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
+                    filePath="$fileName"
+                else
+                    filePath="$directory/$fileName"
+                fi
+                sampleFilePaths+=("${filePath//'/'/\\}")
+                instrFilesIndex+=($filesIndex)
+                (( filesIndex++ ))
+            done < <(getSortedFileNames "$directory")
+        fi
+    done
+}
+
+
+function formatInstrName()
+{
+    # Replace underscores with spaces and trim leading and trailing white space
+    printf '%s' "$1" | tr '_' ' ' | xargs
+}
+
+
+function formatInstrNames()
+{
+    declare -ri numInstruments=${#instrumentNames[@]}
+    declare -i instrID=0
+
+    for (( instrID=0; instrID < numInstruments; instrID++ )); do
+        instrumentNames[$instrID]=$( formatInstrName "${instrumentNames[$instrID]}" )
+    done
+}
+
+
+function findFiles()
+{
+    declare -i numFiles=0
+    declare -i filesIndex=0
+    declare -i layerNum=0
+    declare filePath=""
+
+    # If both file and dir names have been passed on the command line then add PWD to dir search paths
+    if (( ${#fileSearchPaths[@]} > 0 )) && (( ${#dirSearchPaths[@]} > 0 )); then
+        dirSearchPaths+=(".")
+    fi
+
+    # If no file names have been passed on the command line then set file search path to PWD
+    if (( ${#fileSearchPaths[@]} == 0 )); then
+        fileSearchPaths=(".")
+    fi
+
+    # If no dir names have been passed on the command line then set dir search path to PWD
+    if (( ${#dirSearchPaths[@]} == 0 )); then
+        dirSearchPaths=(".")
+    fi
+
+    case $layerMarker in
+        dirs )      findFilesLayerMarkerDirs;;
+        prefix )    findFilesLayerMarkerPrefix;;
+        suffix )    findFilesLayerMarkerSuffix;;
+        * )         findFilesLayerMarkerNone;;
+    esac
+
+    formatInstrNames
+}
+
+
+function calculateF()
+{
+    declare expression=$1
+
+    # scale=4 : round to 4 fractional digits
+    # if(x<1) print 0 : print leading 0
+    # 2>/dev/null : don't print error messages
+    echo $( echo "scale=4; x=$expression; if(x<1) print 0; x" | bc -q 2>/dev/null )
+}
+
+
+function addGroup() 
+{
+    (( velIncrement = VEL_MAX / numLayers + 1 ))
+    (( numBigIncrements = VEL_MAX % numLayers ))
+
+    if (( numLayers == VEL_MAX )); then
+        velIncrement=1
+    fi
+    loVel=1
+    hiVel=$velIncrement
+    layerNum=1
+
+    textLines+=("// $instrName")
+    textLines+=("<group> key=$key loop_mode=$loopMode lochan=$lochan hichan=$hichan")
+
+    while (( fileID < filesIndex + numLayers )); do
+        if (( loVel > 127 )); then
+            loVel=127
+        fi
+        if (( hiVel > 127 )); then
+            hiVel=127
+        fi
+
+        textLines+=("<region> lovel=$loVel hivel=$hiVel sample=${sampleFilePaths[$fileID]}")
+
+        if (( layerNum == numBigIncrements )); then
+            (( velIncrement -= 1 ))
+        fi
+        (( loVel = hiVel + 1 ))
+        (( hiVel += velIncrement ))
+
+        (( layerNum++ ))
+        (( fileID++ ))
+    done
+
+    textLines+=("")
+}
+
+
+function createSingleSfzFile()
+{
+    declare -a textLines
+    declare -ri numInstruments=${#instrumentNames[@]}
+    declare -i instrID=0
+    declare instrName=""
+    declare -i numLayers=0
+    declare -i layerNum=0
+    declare -i fileID=0
+    declare -i filesIndex=0
+    declare -i loVel=0
+    declare -i hiVel=0
+    declare -i velIncrement=0
+    declare -i numBigIncrements=0
+
+    textLines+=("# This file was auto-generated by makesfz")
+    textLines+=("")
+
+    for (( instrID=0; instrID < numInstruments; instrID++ )); do
+        if (( key > KEY_MAX )); then
+            echo "Ran out of keys! Try assigning first sample to a lower key"
+            exit 1
+        fi
+        instrName="${instrumentNames[$instrID]}"
+        numLayers=${instrNumLayers[$instrID]}
+        filesIndex=${instrFilesIndex[$instrID]}
+        fileID=$filesIndex
+        addGroup
+        (( key++ ))
+    done
+
+    touch "$sfzFileName".sfz
+
+    for line in "${textLines[@]}"; do
+        printf '%s\n' "$line" >> "$sfzFileName".sfz
+    done
+}
+
+
+# Main body of script
+
 processArgs
 
-if [ $lokey -gt $hikey ]; then
+if (( lokey > hikey )); then
     echo "lokey can't be higher than hikey"
     exit 1
 fi
 
+findFiles
+
+if [ ${#sampleFilePaths[@]} -eq 0 ]; then
+    echo "No $fileType files found!"
+    exit 1
+fi
+
 if $isSingleFile; then
-    echo -e "# This file was auto-generated by makesfz\n\n<group>\nloop_mode=$loopMode\n" > "$singleFileName".sfz
-
-    for filename in *.$fileType; do
-        if [ "$filename" = "*.$fileType" ]; then
-            echo "No *.$fileType files found in current directory!"
-            rm -f "$singleFileName".sfz
-            exit 1
-        fi
-
-        if [ $key -gt $KEY_MAX ]; then
-            echo "Ran out of keys! Try assigning first sample to a lower key"
-            rm -f "$singleFileName".sfz
-            exit 1
-        fi
-        echo -e "<region>\nsample=$filename\nkey=$key\nlovel=0 hivel=127\nlochan=$lochan hichan=$hichan\n" >> "$singleFileName".sfz
-        (( key++ ))
-    done
+    createSingleSfzFile
 else
-    for filename in *.$fileType; do
-        if [ "$filename" = "*.$fileType" ]; then
-            echo "No *.$fileType files found in current directory!"
-            exit 1
-        fi
-
-        echo -e "# This file was auto-generated by makesfz\n\n<group>\nloop_mode=$loopMode\n" > "${filename%.*}".sfz
-        echo -e "<region>\nsample=$filename" >> "${filename%.*}".sfz
-
-        if $isKeySet; then
-            echo -e "key=$key" >> "${filename%.*}".sfz
-        else
-            echo -e "lokey=$lokey hikey=$hikey\npitch_keycenter=$keycenter" >> "${filename%.*}".sfz
-        fi
-
-        echo -e "lovel=0 hivel=127\nlochan=$lochan hichan=$hichan" >> "${filename%.*}".sfz
+    for instrName in "${instrumentNames[@]}"; do
+        echo "$instrName"
     done
 fi
 
