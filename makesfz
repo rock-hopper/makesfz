@@ -1,19 +1,11 @@
 #!/bin/bash
 #
-# 'makesfz' by Dan MacDonald 2012, modified by RockHopper 2013
+# makesfz by RockHopper 2013. Inspired by makesfz.sh by Dan MacDonald 2012
 #
-# By default, running 'makesfz' with no arguments creates individual .sfz files
-# for every .wav file found in the current directory. Samples are mapped across the 
-# entire keyboard with pitch_keycenter set to MIDI key C4 (middle C).
-#
-# Alternatively, running 'makesfz -s' creates a single .sfz file named after the
-# current directory. Each .wav file found is mapped to its own MIDI key, by default
-# starting at C4.
-#
-# For a full list of options, run 'makesfz -h'
+# A script to auto-generate SFZ files. Requires BASH v4
 #
 # This script is public domain and provided 'as-is', without any express or implied 
-# warranty. In no event will the authors be held liable for any damages arising from 
+# warranty. In no event will the author be held liable for any damages arising from 
 # the use of this software.
 
 
@@ -54,38 +46,52 @@ function showHelp()
 {
     cat << EOF
 
-Usage: makesfz [OPTION]...
+Usage:  makesfz [options]
+        makesfz [options] -- 'file name' ...
 
 By default, running makesfz with no arguments creates individual
 sfz files for every wav file found in the current directory.
 Samples are mapped across the entire keyboard with pitch_keycenter
 set to MIDI key C4 (middle C).
+
+Audio files can be treated as indiviual instruments or as instrument 
+layers grouped either by sub-directory or by file name with numeric 
+prefixes/suffixes indicating the layers.
+
+To scan for files inside a sub-directory, pass the dir name to makesfz
+like so: 'makesfz -- subdir'. To scan for files grouped by directory
+inside a sub-dir use: 'makesfz --layers dirs -- subdir'.
     
 Options:
   -s, --single          Creates a single sfz file named after the
                         current directory. Each wav file found is
                         mapped to its own MIDI key (starting at C4
                         by default)
-  -n, --name 'NAME'     Output file name; ignored unless used with 
+  -n, --name 'NAME'     Output file name. Ignored unless used with 
                         -s option
-      --lk=KEY,         Set lokey. KEY must be 0 - 127 or C-1 - G9
-      --lokey=KEY       (# or b allowed). Ignored when used with
+      --lk KEY,         Set lokey. KEY must be 0 - 127 or C-1 - G9
+      --lokey KEY       (# or b allowed). Ignored when used with
                         -s option
-      --hk=KEY,         Set hikey. KEY must be 0 - 127 or C-1 - G9
-      --hikey=KEY       (# or b allowed). Ignored when used with
+      --hk KEY,         Set hikey. KEY must be 0 - 127 or C-1 - G9
+      --hikey KEY       (# or b allowed). Ignored when used with
                         -s option
-      --kc=KEY,         Set pitch_keycenter. KEY must be 0 - 127
-      --keycenter=KEY   or C-1 - G9 (# or b allowed). Ignored when
+      --kc KEY,         Set pitch_keycenter. KEY must be 0 - 127
+      --keycenter KEY   or C-1 - G9 (# or b allowed). Ignored when
                         used with -s option
-  -k, --key=KEY         Overrides --lk, --hk, and --kc, setting lokey,
+  -k, --key KEY         Overrides --lk, --hk, and --kc, setting lokey,
                         hikey, and pitch_keycenter to KEY.
-                        When used with -s option, each wav file is
+                        When used with -s option, each audio file is
                         mapped to its own MIDI key starting at KEY
   -1, --one-shot        Set loop_mode to one_shot
-  -m, --midi=CHAN       Set midi channel. CHAN must be 1 - 16 or
+  -m, --midi CHAN       Set MIDI channel. CHAN must be 1 - 16 or
                         all (default)
-  -f, --format=FORMAT   Format of audio files to scan for:
+  -f, --format FORMAT   Format of audio files to scan for:
                         wav (default), flac, or ogg
+  -L, --layers MARKER   Files are grouped into instruments
+                        according to a "layer marker".
+                        MARKER may be dirs, prefix, or suffix
+                        (or d, p, or s)
+  -r, --reverse         File names are sorted in reverse order
   -h, --help            Display this help and exit
 
 EOF
