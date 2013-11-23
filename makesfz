@@ -402,11 +402,22 @@ function findFilesLayerMarkerDirs()
 }
 
 
-function findFilesLayerMarkerPrefix()
+function findFilesLayerMarkerDigits()
 {
     declare -i instrID=-1
     declare -iA instrLayerCounters
     declare instrName=""
+    declare regEx=""
+
+    if [ "$layerMarker" == "prefix" ]; then
+        # Strip leading digits from file name
+        regEx='/^[0-9]*([^0-9].*)$/'
+    elif [ "$layerMarker" == "suffix" ]; then
+        # Strip trailing digits from file name
+        regEx='/^(.*[^0-9])[0-9]*$/'
+    else
+        echo -e "Error: \$layerMarker == $layerMarker \nThe programmer has messed up!"; exit 1;
+    fi
 
     for directory in "${dirSearchPaths[@]}"; do
         numFiles=$( getNumMatchingFiles "$directory" )
@@ -414,57 +425,10 @@ function findFilesLayerMarkerPrefix()
         if (( numFiles > 0 )); then
             while IFS= read -r -d '' fileName; do
 
-                # Strip leading digits and file extension from file name
+                # Strip file extension and layer marker digits from file name
                 instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
                 {
-                    instrName = gensub(/^[0-9]*([^0-9].*)$/, "\\1", 1)
-                    printf("%s", instrName)
-                }')
-
-                # If file belongs to a new instrument rather than a layer of an existing instrument...
-                if [ "${instrLayerCounters[$instrName]}" == "" ]; then
-                    (( instrID++ ))
-                    instrumentNames+=("$instrName")
-                    instrFilesIndex+=($filesIndex)
-                fi
-
-                instrLayerCounters["$instrName"]+=1
-                layerNum=${instrLayerCounters["$instrName"]}
-                if (( layerNum <= VEL_MAX )); then
-                    instrNumLayers[$instrID]=$layerNum
-
-                    if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
-                        filePath="$fileName"
-                    else
-                        filePath="$directory/$fileName"
-                    fi
-                    sampleFilePaths+=("${filePath//'/'/\\}")
-                    (( filesIndex++ ))
-                else
-                    echo -e "Warning: Instruments can only have $VEL_MAX layers \nInstrument \""$( formatInstrName "$instrName" )"\" already has $VEL_MAX layers \n$fileName will not be included\n"
-                fi
-            done < <(getSortedFileNames "$directory")
-        fi
-    done
-}
-
-
-function findFilesLayerMarkerSuffix()
-{
-    declare -i instrID=-1
-    declare -iA instrLayerCounters
-    declare instrName=""
-
-    for directory in "${dirSearchPaths[@]}"; do
-        numFiles=$( getNumMatchingFiles "$directory" )
-
-        if (( numFiles > 0 )); then
-            while IFS= read -r -d '' fileName; do
-
-                # Strip trailing digits and file extension from file name
-                instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
-                {
-                    instrName = gensub(/^(.*[^0-9])[0-9]*$/, "\\1", 1)
+                    instrName = gensub( '"$regEx"', "\\1", 1 )
                     printf("%s", instrName)
                 }')
 
@@ -561,8 +525,8 @@ function findFiles()
 
     case $layerMarker in
         dirs )      findFilesLayerMarkerDirs;;
-        prefix )    findFilesLayerMarkerPrefix;;
-        suffix )    findFilesLayerMarkerSuffix;;
+        prefix )    findFilesLayerMarkerDigits;;
+        suffix )    findFilesLayerMarkerDigits;;
         * )         findFilesLayerMarkerNone;;
     esac
 
