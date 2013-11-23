@@ -2,51 +2,71 @@
 #
 # 'Make SFZ' by RockHopper 2013
 #
-# This is a Nautilus script to invoke 'makesfz'. It assumes that makesfz is
-# installed in /usr/bin and that xterm is available.
+# This is a Nautilus script to invoke 'makesfz'. It assumes that makesfz is installed
+# in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin) 
+# and that xterm is available.
 #
 # This script is public domain and provided 'as-is', without any express or implied 
 # warranty. In no event will the author be held liable for any damages arising from 
 # the use of this software.
 
 
-# These variables may be modified if makesfz is installed somewhere other than /usr/bin
+# These variables may be modified if you need to specify the file path of makesfz
 # or if you wish to use a different terminal emulator
 
-MAKESFZ_FILEPATH="makesfz"
+MAKESFZ_FILEPATH="/dev/shm/makesfz/makesfz"
 TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
 
 # N.B. For a list of available fonts in xterm type: appres XTerm | grep VT100.font
 ##################################################################################
 
 
+declare filePaths=""
+declare fileType=""
+declare prevFileType=""
+
+while IFS="\n" read -r -d $'\n' filePath; do
+    filePaths+="\"$filePath\" "
+done < <(echo -n "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+
+while IFS="\n" read -r -d $'\n' filePath; do
+    fileType="${filePath##*.}"
+
+    if [[ $fileType != [wW][aA][vV] ]] && [[ $fileType != [fF][lL][aA][cC] ]] && [[ $fileType != [oO][gG][gG] ]]; then
+        fileType=""
+    fi
+
+    if [ "$prevFileType" != "" ] && [ "$fileType" != "$prevFileType" ]; then
+        fileType=""
+        break
+    fi
+    prevFileType="$fileType"
+done < <(echo -n "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+
 commandToExec='function setTextColour { tput setf $1; }; let CYAN=3; let RED=4; let YELLOW=6; let WHITE=7; '
 commandToExec+='function startUnderline { tput smul; }; function stopUnderline { tput rmul; }; '
 commandToExec+='function moveCursorUpOneLine { tput cuu1; }; '
 commandToExec+='args=""; '
 
-
+# Welcome message
 commandToExec+='setTextColour $YELLOW; startUnderline; echo -e "\nMake SFZ\n"; stopUnderline; setTextColour $WHITE; '
 
 commandToExec+='echo -e "This script will scan the current directory for compatible audio files\nand auto-generate one or more .sfz file(s) which can be imported into,\nfor example, LinuxSampler.\n\nMake SFZ can create individual .sfz files for each audio file in the\ncurrent directory. Alternatively, it can create a single .sfz file in\nwhich every audio file in the current directory is mapped to its own key.\n"; '
 
 commandToExec+='echo -e "Please enter the following details or simply press enter to accept the\ndefault values...\n"; '
 
-
-# create a single file?
-commandToExec+='echo "Do you want to create a single .sfz file? (default is no):"; setTextColour $CYAN; read -e isSingleFile; '
+# Create a single file?
+commandToExec+='echo "Do you want to create a single SFZ file? (default is no):"; setTextColour $CYAN; read -e isSingleFile; '
 commandToExec+='if [[ $isSingleFile == "" ]]; then isSingleFile="no"; moveCursorUpOneLine; echo "$isSingleFile"; fi; setTextColour $WHITE; '
 
 # if isSingleFile == yes
 commandToExec+='if [[ $isSingleFile == [yY] ]] || [[ $isSingleFile == [yY][eE][sS] ]]; then '
 
-commandToExec+='echo "Name of .sfz file (default is name of current directory, \"${PWD##*/}\"):"; setTextColour $CYAN; read -e fileName; '
-commandToExec+='if [[ $fileName == "" ]]; then fileName="${PWD##*/}"; moveCursorUpOneLine; echo "$fileName"; fi; setTextColour $WHITE; '
+commandToExec+='echo "Name of sfz file (default is name of current directory, \"${PWD##*/}\"):"; setTextColour $CYAN; read -e sfzFileName; '
+commandToExec+='if [[ $sfzFileName == "" ]]; then sfzFileName="${PWD##*/}"; moveCursorUpOneLine; echo "$sfzFileName"; fi; setTextColour $WHITE; '
 
 commandToExec+='echo "Start key (0 to 127, or C-1 to G9, # or b allowed) (default is C4):"; setTextColour $CYAN; read -e key; '
 commandToExec+='if [[ $key == "" ]]; then key="C4"; moveCursorUpOneLine; echo "$key"; fi; setTextColour $WHITE; '
-
-commandToExec+='args+="-s -k=$key"; '
 
 # else if isSingleFile == no
 commandToExec+='elif [[ $isSingleFile == [nN] ]] || [[ $isSingleFile == [nN][oO] ]]; then '
@@ -60,47 +80,54 @@ commandToExec+='if [[ $hikey == "" ]]; then hikey="G9"; moveCursorUpOneLine; ech
 commandToExec+='echo "Pitch key center (0 to 127, or C-1 to G9, # or b allowed) (default is C4):"; setTextColour $CYAN; read -e keycenter; '
 commandToExec+='if [[ $keycenter == "" ]]; then keycenter="C4"; moveCursorUpOneLine; echo "$keycenter"; fi; setTextColour $WHITE; '
 
-commandToExec+='args+="--lk=$lokey --hk=$hikey --kc=$keycenter"; '
-
 # else isSingleFile is random gibberish
 commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isSingleFile"; exit 1; fi; '
 
+# Set audio file format
+if [ "$fileType" != "" ]; then
+    commandToExec+="format='$fileType'; "
+else
+    commandToExec+='echo "Audio file format (wav (default), flac, or ogg):"; setTextColour $CYAN; read -e format; '
+    commandToExec+='if [[ $format == "" ]]; then format="wav"; moveCursorUpOneLine; echo "$format"; fi; setTextColour $WHITE; '
+fi
 
-# audio file format
-commandToExec+='echo "Audio file format (wav (default), flac, or ogg):"; setTextColour $CYAN; read -e format; '
-commandToExec+='if [[ $format == "" ]]; then format="wav"; moveCursorUpOneLine; echo "$format"; fi; setTextColour $WHITE; '
-commandToExec+='args+=" -f=$format"; '
-
-
-# enable one-shot?
+# Enable one-shot?
 commandToExec+='echo "Enable one-shot? (default is no):"; setTextColour $CYAN; read -e isOneShotWanted; '
 commandToExec+='if [[ $isOneShotWanted == "" ]]; then isOneShotWanted="no"; moveCursorUpOneLine; echo "$isOneShotWanted"; fi; setTextColour $WHITE; '
 
-# if isOneShotWanted == yes
-commandToExec+='if [[ $isOneShotWanted == [yY] ]] || [[ $isOneShotWanted == [yY][eE][sS] ]]; then '
-commandToExec+='args+=" -1"; '
+commandToExec+='if [[ $isOneShotWanted == [nN] ]] || [[ $isOneShotWanted == [nN][oO] ]]; then '
+commandToExec+='isOneShotWanted=""; '
 
-# else if isOneShotWanted == no
-commandToExec+='elif [[ $isOneShotWanted == [nN] ]] || [[ $isOneShotWanted == [nN][oO] ]]; then '
-commandToExec+='args+=""; '
+commandToExec+='elif [[ $isOneShotWanted != [yY] ]] && [[ $isOneShotWanted != [yY][eE][sS] ]]; then '
+commandToExec+='setTextColour $RED; echo -e "\nInvalid value: $isOneShotWanted"; exit 1; fi; '
 
-# else isOneShotWanted is random gibberish
-commandToExec+='else setTextColour $RED; echo -e "\nInvalid value: $isOneShotWanted"; exit 1; fi; '
-
-
-# set MIDI channel
+# Set MIDI channel
 commandToExec+='echo "Set MIDI channel (1 - 16, or all) (default is \"all\"):"; setTextColour $CYAN; read -e midiChan; '
 commandToExec+='if [[ $midiChan == "" ]]; then midiChan="all"; moveCursorUpOneLine; echo "$midiChan"; fi; setTextColour $WHITE; '
-commandToExec+='args+=" -m=$midiChan"; '
 
+# Set "layer marker"
+commandToExec+='echo "Set \"layer marker\" (none (default), dirs, prefix, or suffix (or d, p, or s)):"; setTextColour $CYAN; read -e layerMarker; '
+commandToExec+='if [[ $layerMarker == "" ]]; then moveCursorUpOneLine; echo "none"; fi; '
+commandToExec+='if [[ $layerMarker == "none" ]]; then layerMarker=""; fi; setTextColour $WHITE; '
 
-# run makesfz
+# Reverse sort order
+commandToExec+='echo "Reverse sort order? (default is no):"; setTextColour $CYAN; read -e isReverseSortOn; '
+commandToExec+='if [[ $isReverseSortOn == "" ]]; then isReverseSortOn="no"; moveCursorUpOneLine; echo "$isReverseSortOn"; fi; setTextColour $WHITE; '
+
+commandToExec+='if [[ $isReverseSortOn == [nN] ]] || [[ $isReverseSortOn == [nN][oO] ]]; then '
+commandToExec+='isReverseSortOn=""; '
+
+commandToExec+='elif [[ $isReverseSortOn != [yY] ]] && [[ $isReverseSortOn != [yY][eE][sS] ]]; then '
+commandToExec+='setTextColour $RED; echo -e "\nInvalid value: $isReverseSortOn"; exit 1; fi; '
+
+# Run makesfz
 commandToExec+='echo; setTextColour $RED; '
+
 commandToExec+="$MAKESFZ_FILEPATH "
-commandToExec+='$args -n "$fileName"; '
+commandToExec+='${sfzFileName:+-n "$sfzFileName" -s -k "$key"} ${lokey:+--lk "$lokey" --hk "$hikey" --kc "$keycenter"} -f "$format" ${isOneShotWanted:+-1} -m "$midiChan" ${layerMarker:+-L "$layerMarker"} ${isReverseSortOn:+-r} '
+commandToExec+="${filePaths:+-- $filePaths}; "
+
 commandToExec+='if [ $? -eq 0 ]; then setTextColour $YELLOW; echo -e "All done!"; fi'
 
-
 $TERMINAL_COMMAND "$commandToExec"
-
 
