@@ -2,7 +2,7 @@
 #
 # 'Make SFZ' by RockHopper 2013
 #
-# This is a Nautilus script to invoke 'makesfz'. It assumes that makesfz is installed
+# This is a Nautilus script to invoke makesfz. It assumes that makesfz is installed
 # in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin) 
 # and that xterm is available.
 #
@@ -14,7 +14,7 @@
 # These variables may be modified if you need to specify the file path of makesfz
 # or if you wish to use a different terminal emulator
 
-MAKESFZ_FILEPATH="/dev/shm/makesfz/makesfz"
+MAKESFZ_FILEPATH="makesfz"
 TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
 
 # N.B. For a list of available fonts in xterm type: appres XTerm | grep VT100.font
@@ -46,14 +46,26 @@ done < <(echo -n "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
 commandToExec='function setTextColour { tput setf $1; }; let CYAN=3; let RED=4; let YELLOW=6; let WHITE=7; '
 commandToExec+='function startUnderline { tput smul; }; function stopUnderline { tput rmul; }; '
 commandToExec+='function moveCursorUpOneLine { tput cuu1; }; '
-commandToExec+='args=""; '
 
 # Welcome message
 commandToExec+='setTextColour $YELLOW; startUnderline; echo -e "\nMake SFZ\n"; stopUnderline; setTextColour $WHITE; '
 
-commandToExec+='echo -e "This script will scan the current directory for compatible audio files\nand auto-generate one or more .sfz file(s) which can be imported into,\nfor example, LinuxSampler.\n\nMake SFZ can create individual .sfz files for each audio file in the\ncurrent directory. Alternatively, it can create a single .sfz file in\nwhich every audio file in the current directory is mapped to its own key.\n"; '
+commandToExec+='cat << EOF
+This script will auto-generate one or more SFZ files from the selected 
+file(s) and/or dir(s). If no files are selected it will scan the current 
+directory for compatible audio files (wav, flac, or ogg).
 
-commandToExec+='echo -e "Please enter the following details or simply press enter to accept the\ndefault values...\n"; '
+Make SFZ can create individual SFZ files for each audio file or, 
+alternatively, it can create a single SFZ file in which every audio 
+file is mapped to its own key.
+
+Audio files can be treated as indiviual instruments or as instrument 
+layers grouped either by sub-directory or by file name with numeric 
+prefixes/suffixes indicating the layers.
+
+EOF
+'
+commandToExec+='setTextColour $YELLOW; echo -e "Please enter the following details or simply press enter to accept the\ndefault values...\n"; setTextColour $WHITE; '
 
 # Create a single file?
 commandToExec+='echo "Do you want to create a single SFZ file? (default is no):"; setTextColour $CYAN; read -e isSingleFile; '
