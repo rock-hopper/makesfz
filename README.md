@@ -1,8 +1,8 @@
 makesfz
 =======
 
-BASH script to auto-generate SFZ files
-Requires BASH v4
+BASH script to auto-generate SFZ files.
+Requires BASH v4.
 
 Inspired by danboid's original makesfz.sh script http://www.remastersys.com/forums/index.php?topic=1951.0
 
