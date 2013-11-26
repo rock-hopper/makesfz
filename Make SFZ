@@ -26,7 +26,7 @@ declare fileType=""
 declare prevFileType=""
 
 while IFS="\n" read -r -d $'\n' filePath; do
-    filePaths+="\"$filePath\" "
+    filePaths+="\"${filePath##*/}\" "
 done < <(echo -n "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
 
 while IFS="\n" read -r -d $'\n' filePath; do
@@ -74,7 +74,7 @@ commandToExec+='if [[ $isSingleFile == "" ]]; then isSingleFile="no"; moveCursor
 # if isSingleFile == yes
 commandToExec+='if [[ $isSingleFile == [yY] ]] || [[ $isSingleFile == [yY][eE][sS] ]]; then '
 
-commandToExec+='echo "Name of sfz file (default is name of current directory, \"${PWD##*/}\"):"; setTextColour $CYAN; read -e sfzFileName; '
+commandToExec+='echo "Name of SFZ file (default is name of current directory, \"${PWD##*/}\"):"; setTextColour $CYAN; read -e sfzFileName; '
 commandToExec+='if [[ $sfzFileName == "" ]]; then sfzFileName="${PWD##*/}"; moveCursorUpOneLine; echo "$sfzFileName"; fi; setTextColour $WHITE; '
 
 commandToExec+='echo "Start key (0 to 127, or C-1 to G9, # or b allowed) (default is C4):"; setTextColour $CYAN; read -e key; '

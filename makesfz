@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# makesfz by RockHopper 2013. Inspired by makesfz.sh by Dan MacDonald 2012
+# makesfz by RockHopper 2013. Inspired by makesfz.sh by Dan MacDonald
 #
 # A script to auto-generate SFZ files. Requires BASH v4
 #
@@ -300,11 +300,7 @@ function processArgs()
 
 function getNumMatchingFiles()
 {
-    declare -a searchPaths=("$1")
-
-    if [ "$1" == "." ] || [ "$1" == "./" ]; then
-        searchPaths=("${fileSearchPaths[@]}")
-    fi
+    declare -a searchPaths=("$@")
 
     # RS (Record Separator) is set to "/" as "\0" would simply read the entire
     # input stream as one record. Setting FS (Field Separator) to "\0" is no good
@@ -320,11 +316,7 @@ function getNumMatchingFiles()
 
 function getSortedFileNames()
 {
-    declare -a searchPaths=("$1")
-
-    if [ "$1" == "." ] || [ "$1" == "./" ]; then
-        searchPaths=("${fileSearchPaths[@]}")
-    fi
+    declare -a searchPaths=("$@")
 
     declare key1=""
     declare key2=""
@@ -369,42 +361,38 @@ function findFilesLayerMarkerDirs()
     # file names containing spaces or new lines from being split
 
     # Find sub-directories containing audio files 
-    for directory in "${dirSearchPaths[@]}"; do
-        while IFS= read -r -d '' subDir; do
-            numFiles=$( getNumMatchingFiles "$subDir" )
+    while IFS= read -r -d '' subDir; do
+        numFiles=$( getNumMatchingFiles "$subDir" )
 
-            if (( numFiles > 0 )); then
-                if (( numFiles > VEL_MAX )); then
-                    echo -e "Warning: Instruments can only have $VEL_MAX layers \n$numFiles matching files found in $subDir \nOnly the first $VEL_MAX will be included\n"
-                    numFiles=$VEL_MAX
-                fi
-                instrumentNames+=("${subDir##*/}")
-                instrNumLayers+=($numFiles)
-                instrFilesIndex+=($filesIndex)
-                (( filesIndex += numFiles ))
-
-                # Find audio files in sub-directory
-                layerNum=1
-                while IFS= read -r -d '' fileName; do
-                    if (( layerNum <= VEL_MAX )); then
-                        subDir="${subDir#./}"
-                        filePath="$subDir/$fileName"
-                        sampleFilePaths+=("${filePath//'/'/\\}")
-                        (( layerNum++ ))
-                    fi
-                done < <(getSortedFileNames "$subDir")
+        if (( numFiles > 0 )); then
+            if (( numFiles > VEL_MAX )); then
+                echo -e "Warning: Instruments can only have $VEL_MAX layers \n$numFiles matching files found in $subDir \nOnly the first $VEL_MAX will be included\n"
+                numFiles=$VEL_MAX
             fi
-        done < <(find "$directory" -maxdepth 1 -type d ! -wholename "$directory" -print0 | sort -z)
-    done
+            instrumentNames+=("${subDir##*/}")
+            instrNumLayers+=($numFiles)
+            instrFilesIndex+=($filesIndex)
+            (( filesIndex += numFiles ))
 
-    # Find audio files not in sub-directories
-    findFilesLayerMarkerNone
+            # Find audio files in sub-directory
+            layerNum=1
+            while IFS= read -r -d '' fileName; do
+                if (( layerNum <= VEL_MAX )); then
+                    subDir="${subDir#./}"
+                    filePath="$subDir/$fileName"
+                    sampleFilePaths+=("${filePath//'/'/\\}")
+                    (( layerNum++ ))
+                fi
+            done < <(getSortedFileNames "$subDir")
+        fi
+    done < <(find "$directory" -maxdepth 1 -type d ! -wholename "$directory" -print0 | sort -z)
 }
 
 
 function findFilesLayerMarkerDigits()
 {
-    declare -i instrID=-1
+    declare -a searchPaths=("$@")
+
     declare -iA instrLayerCounters
     declare instrName=""
     declare regEx=""
@@ -419,67 +407,67 @@ function findFilesLayerMarkerDigits()
         echo -e "Error: \$layerMarker == $layerMarker \nThe programmer has messed up!"; exit 1;
     fi
 
-    for directory in "${dirSearchPaths[@]}"; do
-        numFiles=$( getNumMatchingFiles "$directory" )
+    numFiles=$( getNumMatchingFiles "${searchPaths[@]}" )
 
-        if (( numFiles > 0 )); then
-            while IFS= read -r -d '' fileName; do
+    if (( numFiles > 0 )); then
+        while IFS= read -r -d '' fileName; do
+            # Strip file extension and layer marker digits from file name
+            instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
+            {
+                instrName = gensub( '"$regEx"', "\\1", 1 )
+                printf("%s", instrName)
+            }')
 
-                # Strip file extension and layer marker digits from file name
-                instrName=$( printf '%s/' "${fileName%.*}" | gawk 'BEGIN { RS = "/" }
-                {
-                    instrName = gensub( '"$regEx"', "\\1", 1 )
-                    printf("%s", instrName)
-                }')
+            # If file belongs to a new instrument rather than a layer of an existing instrument...
+            if [ "${instrLayerCounters[$instrName]}" == "" ]; then
+                (( instrID++ ))
+                instrumentNames+=("$instrName")
+                instrFilesIndex+=($filesIndex)
+            fi
 
-                # If file belongs to a new instrument rather than a layer of an existing instrument...
-                if [ "${instrLayerCounters[$instrName]}" == "" ]; then
-                    (( instrID++ ))
-                    instrumentNames+=("$instrName")
-                    instrFilesIndex+=($filesIndex)
-                fi
+            instrLayerCounters["$instrName"]+=1
+            layerNum=${instrLayerCounters["$instrName"]}
 
-                instrLayerCounters["$instrName"]+=1
-                layerNum=${instrLayerCounters["$instrName"]}
-                if (( layerNum <= VEL_MAX )); then
-                    instrNumLayers[$instrID]=$layerNum
+            if (( layerNum <= VEL_MAX )); then
+                instrNumLayers[$instrID]=$layerNum
 
-                    if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
-                        filePath="$fileName"
-                    else
-                        filePath="$directory/$fileName"
-                    fi
-                    sampleFilePaths+=("${filePath//'/'/\\}")
-                    (( filesIndex++ ))
-                else
-                    echo -e "Warning: Instruments can only have $VEL_MAX layers \nInstrument \""$( formatInstrName "$instrName" )"\" already has $VEL_MAX layers \n$fileName will not be included\n"
-                fi
-            done < <(getSortedFileNames "$directory")
-        fi
-    done
-}
-
-
-function findFilesLayerMarkerNone()
-{
-    for directory in "${dirSearchPaths[@]}"; do
-        numFiles=$( getNumMatchingFiles "$directory" )
-
-        if (( numFiles > 0 )); then
-            while IFS= read -r -d '' fileName; do
-                instrumentNames+=("${fileName%.*}")
-                instrNumLayers+=(1)
-                if [ "$directory" == "." ] || [ "$directory" == "./" ]; then
+                if [ "$directory" == "" ] || [ "$directory" == "." ] || [ "$directory" == "./" ]; then
                     filePath="$fileName"
                 else
                     filePath="$directory/$fileName"
                 fi
                 sampleFilePaths+=("${filePath//'/'/\\}")
-                instrFilesIndex+=($filesIndex)
                 (( filesIndex++ ))
-            done < <(getSortedFileNames "$directory")
-        fi
-    done
+            else
+                echo -e "Warning: Instruments can only have $VEL_MAX layers \nInstrument \""$( formatInstrName "$instrName" )"\" already has $VEL_MAX layers \n$fileName will not be included\n"
+            fi
+        done < <(getSortedFileNames "${searchPaths[@]}")
+    fi
+}
+
+
+function findFilesLayerMarkerNone()
+{
+    declare -a searchPaths=("$@")
+
+    numFiles=$( getNumMatchingFiles "${searchPaths[@]}" )
+
+    if (( numFiles > 0 )); then
+        while IFS= read -r -d '' fileName; do
+            instrumentNames+=("${fileName%.*}")
+            instrNumLayers+=(1)
+
+            if [ "$directory" == "" ] || [ "$directory" == "." ] || [ "$directory" == "./" ]; then
+                filePath="$fileName"
+            else
+                filePath="$directory/$fileName"
+            fi
+            sampleFilePaths+=("${filePath//'/'/\\}")
+            instrFilesIndex+=($filesIndex)
+
+            (( filesIndex++ ))
+        done < <(getSortedFileNames "${searchPaths[@]}")
+    fi
 }
 
 
@@ -507,28 +495,32 @@ function findFiles()
     declare -i filesIndex=0
     declare -i layerNum=0
     declare filePath=""
+    declare -i instrID=-1
 
-    # If both file and dir names have been passed on the command line then add PWD to dir search paths
-    if (( ${#fileSearchPaths[@]} > 0 )) && (( ${#dirSearchPaths[@]} > 0 )); then
-        dirSearchPaths+=(".")
-    fi
-
-    # If no file names have been passed on the command line then set file search path to PWD
-    if (( ${#fileSearchPaths[@]} == 0 )); then
-        fileSearchPaths=(".")
-    fi
-
-    # If no dir names have been passed on the command line then set dir search path to PWD
-    if (( ${#dirSearchPaths[@]} == 0 )); then
+    # If no file or dir names have been passed on the command line then set dir search path to PWD
+    if (( ${#dirSearchPaths[@]} == 0 )) && (( ${#fileSearchPaths[@]} == 0 )); then
         dirSearchPaths=(".")
     fi
 
-    case $layerMarker in
-        dirs )      findFilesLayerMarkerDirs;;
-        prefix )    findFilesLayerMarkerDigits;;
-        suffix )    findFilesLayerMarkerDigits;;
-        * )         findFilesLayerMarkerNone;;
-    esac
+    for directory in "${dirSearchPaths[@]}"; do
+        case $layerMarker in
+            dirs )      findFilesLayerMarkerDirs "$directory"; findFilesLayerMarkerNone "$directory";;
+            prefix )    findFilesLayerMarkerDigits "$directory";;
+            suffix )    findFilesLayerMarkerDigits "$directory";;
+            * )         findFilesLayerMarkerNone "$directory";;
+        esac
+    done
+
+    unset directory
+
+    if (( ${#fileSearchPaths[@]} > 0 )); then
+        case $layerMarker in
+            dirs )      findFilesLayerMarkerNone "${fileSearchPaths[@]}";;
+            prefix )    findFilesLayerMarkerDigits "${fileSearchPaths[@]}";;
+            suffix )    findFilesLayerMarkerDigits "${fileSearchPaths[@]}";;
+            * )         findFilesLayerMarkerNone "${fileSearchPaths[@]}";;
+        esac
+    fi
 
     formatInstrNames
 }
@@ -613,6 +605,7 @@ function createSingleSfzFile()
         read -e input
         if [[ $input == [yY] ]] || [[ $input == [yY][eE][sS] ]]; then
             rm -f "$sfzFileName".sfz
+            echo
         else
             echo "Bailing out!"
             exit 1
@@ -658,6 +651,7 @@ function createMultiSfzFiles()
             read -e input
             if [[ $input == [yY] ]] || [[ $input == [yY][eE][sS] ]]; then
                 rm -f "$instrName".sfz
+                echo
             else
                 echo "Bailing out!"
                 exit 1
