@@ -355,7 +355,7 @@ function getSortedFileNames()
 }
 
 
-function findFilesLayerMarkerDirs()
+function findFilesInSubDirs()
 {
     # IFS (Internal Field Separator) is set to null for duration of read operation to prevent
     # file names containing spaces or new lines from being split
@@ -389,7 +389,7 @@ function findFilesLayerMarkerDirs()
 }
 
 
-function findFilesLayerMarkerDigits()
+function findFilesWithDigits()
 {
     declare -a searchPaths=("$@")
 
@@ -446,7 +446,7 @@ function findFilesLayerMarkerDigits()
 }
 
 
-function findFilesLayerMarkerNone()
+function findFilesSingleLayer()
 {
     declare -a searchPaths=("$@")
 
@@ -504,10 +504,10 @@ function findFiles()
 
     for directory in "${dirSearchPaths[@]}"; do
         case $layerMarker in
-            dirs )      findFilesLayerMarkerDirs "$directory"; findFilesLayerMarkerNone "$directory";;
-            prefix )    findFilesLayerMarkerDigits "$directory";;
-            suffix )    findFilesLayerMarkerDigits "$directory";;
-            * )         findFilesLayerMarkerNone "$directory";;
+            dirs )      findFilesInSubDirs "$directory"; findFilesSingleLayer "$directory";;
+            prefix )    findFilesWithDigits "$directory";;
+            suffix )    findFilesWithDigits "$directory";;
+            * )         findFilesSingleLayer "$directory";;
         esac
     done
 
@@ -515,10 +515,10 @@ function findFiles()
 
     if (( ${#fileSearchPaths[@]} > 0 )); then
         case $layerMarker in
-            dirs )      findFilesLayerMarkerNone "${fileSearchPaths[@]}";;
-            prefix )    findFilesLayerMarkerDigits "${fileSearchPaths[@]}";;
-            suffix )    findFilesLayerMarkerDigits "${fileSearchPaths[@]}";;
-            * )         findFilesLayerMarkerNone "${fileSearchPaths[@]}";;
+            dirs )      findFilesSingleLayer "${fileSearchPaths[@]}";;
+            prefix )    findFilesWithDigits "${fileSearchPaths[@]}";;
+            suffix )    findFilesWithDigits "${fileSearchPaths[@]}";;
+            * )         findFilesSingleLayer "${fileSearchPaths[@]}";;
         esac
     fi
 
