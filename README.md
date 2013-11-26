@@ -38,11 +38,11 @@ become layers of kick1, and
 
 become layers of kick2.
 
-To scan for files inside a sub-directory, pass the directory name to makesfz like so: 
+To scan for files inside a directory, pass the directory name to makesfz like so: 
 
     makesfz -- 'dir name'
 
-To scan for files grouped by directory inside a sub-directory use: 
+To scan for files grouped by sub-directory inside a directory use: 
 
     makesfz --layers dirs -- 'dir name'
 
