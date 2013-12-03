@@ -58,6 +58,8 @@ function stopUnderline() { tput rmul; }
 
 function moveCursorUpOneLine() { tput cuu1; }
 
+function resetText() { echo -en "\e[0m"; }
+
 
 function exitWithError() 
 {
@@ -68,7 +70,7 @@ function exitWithError()
     # 1>&2 means redirect text headed for stdout to stderr
     echo -e "\n$errorMessage\n" 1>&2
     
-    setTextColour $WHITE
+    resetText
     
     exit 1
 }
@@ -986,4 +988,4 @@ if $isInteractiveModeOn; then
     setTextColour $YELLOW; echo -e "All done!\n"
 fi
 
-setTextColour $WHITE
+resetText
