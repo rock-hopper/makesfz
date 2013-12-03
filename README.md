@@ -46,7 +46,7 @@ To scan for files grouped by sub-directory inside a directory use:
 
     makesfz --layers dirs -- 'dir name'
 
-To see the full list of available options:
+Options to reverse the sort order and to run the script in "interactive mode" are also available. To see the full list of available options:
 
     makesfz -h
 
@@ -61,7 +61,20 @@ The script assumes that makesfz is installed in a directory included in the PATH
 
 Near the top of the script are variables that may be modified if you need to specify the file path of makesfz or if you wish to use a terminal emulator other than xterm:
 
-    MAKESFZ_FILEPATH="makesfz"
+    MAKESFZ_PATH="makesfz"
     TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
 
 Place the script in the Nautilus scripts directory, e.g. '~/.gnome2/nautilus-scripts'. If Nautilus Scripts Manager is installed, place the script in '/usr/share/nautilus-scripts'.
+___
+
+makesfz.desktop
+===============
+
+KDE service menu .desktop file to invoke makesfz. It assumes that makesfz is installed in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin).
+
+Place the .desktop file in one of the service menu directories, e.g. '/usr/share/services/ServiceMenus'.
+
+You can find the location of all service directories like so:
+
+    kde4-config --path services
+
