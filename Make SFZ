@@ -15,7 +15,7 @@
 # or if you wish to use a different terminal emulator
 
 MAKESFZ_PATH="makesfz"
-TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
+TERMINAL_COMMAND="xterm -bg black -hold -title MakeSFZ -font 9x15 -e"
 # TERMINAL_COMMAND="konsole --hold -e"
 
 # N.B. For a list of available fonts in xterm type: appres XTerm | grep VT100.font
