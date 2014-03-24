@@ -1,14 +1,13 @@
 #!/bin/bash
 #
-# 'Make SFZ' by RockHopper 2013
+# 'Make SFZ' by Andrew M Taylor 2013
 #
 # This is a Nautilus script to invoke makesfz. It assumes that makesfz is installed
 # in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin) 
 # and that xterm is available.
 #
-# This script is public domain and provided 'as-is', without any express or implied 
-# warranty. In no event will the author be held liable for any damages arising from 
-# the use of this software.
+# This is free and unencumbered software released into the public domain.
+# Please read UNLICENSE for more details, or refer to <http://unlicense.org/>
 
 
 # These variables may be modified if you need to specify the file path of makesfz
