@@ -80,7 +80,7 @@ function showHelp()
     cat << EOF
 
 Usage:  makesfz [options]
-        makesfz [options] -- 'file name' ...
+        makesfz [options] --files 'file_name' ...
 
 By default, running makesfz with no arguments creates individual
 sfz files for every wav file found in the current directory.
@@ -92,8 +92,8 @@ layers grouped either by sub-directory or by file name with numeric
 prefixes/suffixes indicating the layers.
 
 To scan for files inside a directory, pass the dir name to makesfz
-like so: 'makesfz -- directory'. To scan for files grouped by sub-dir
-inside a directory use: 'makesfz --layers dirs -- directory'.
+like so: makesfz --files 'dir_name'. To scan for files grouped by 
+sub-dir inside a directory use: makesfz -L dirs --files 'dir_name'.
     
 Options:
   -s, --single          Creates a single sfz file named after the
@@ -323,7 +323,7 @@ function processArgs()
                 --service-menu )    isServiceMenuModeOn=true;;
                 -h )                showHelp; exit 0;;
                 --help )            showHelp; exit 0;;
-                -- )                (( i++ )); setSearchPaths $i; break;;
+                --files )           (( i++ )); setSearchPaths $i; break;;
                 * )                 exitWithError "Invalid option: \"${ARGS[$i]}\". See 'makesfz -h' for usage";;
             esac
             (( i++ ))

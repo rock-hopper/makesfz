@@ -40,11 +40,11 @@ become layers of kick2.
 
 To scan for files inside a directory, pass the directory name to makesfz like so: 
 
-    makesfz -- 'dir name'
+    makesfz --files 'dir_name'
 
 To scan for files grouped by sub-directory inside a directory use: 
 
-    makesfz --layers dirs -- 'dir name'
+    makesfz -L dirs --files 'dir_name'
 
 Options to reverse the sort order and to run the script in "interactive mode" are also available. To see the full list of options:
 
