@@ -570,10 +570,10 @@ function makePathsRelative()
     done
     
     for (( i = 0; i < ${#dirSearchPaths[@]}; i++ )); do
-        if [[ ${dirSearchPaths[i]} != "$PWD/" ]]; then
-            dirSearchPaths[i]="${dirSearchPaths[i]#$PWD/}"
-        else
+        if [[ ${dirSearchPaths[i]} == "$PWD" ]] || [[ ${dirSearchPaths[i]} == "$PWD/" ]]; then
             dirSearchPaths[i]="."
+        else
+            dirSearchPaths[i]="${dirSearchPaths[i]#$PWD/}"
         fi
     done
 }
