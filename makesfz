@@ -616,10 +616,10 @@ function getSortedFileNames()
     fi
 
     case $layerMarker in
-        dirs )      key1="2,2d";            key2="1,1n$sortOrder";  key3="3,3n$sortOrder";;
+        dirs )      key1="1,1n$sortOrder";  key2="2,2d$sortOrder";  key3="3,3n";;
         prefix )    key1="2,2d";            key2="3,3n";            key3="1,1n$sortOrder";;
-        suffix )    key1="2,2d";            key2="1,1n";            key3="3,3n$sortOrder";;
-        * )         key1="2,2d$sortOrder";  key2="1,1n";            key3="3,3n";;
+        suffix )    key1="1,1n";            key2="2,2d";            key3="3,3n$sortOrder";;
+        * )         key1="1,1n$sortOrder";  key2="2,2d$sortOrder";  key3="3,3n";;
     esac
 
     # sort -z appends null terminator instead of a new line
@@ -634,7 +634,7 @@ function getSortedFileNames()
         delimFileName = gensub( /(^[0-9]*)(.*[^0-9])([0-9]*[.]'$fileType'$)/, "\\1/\\2/\\3", 1 )
         printf( "%s\0", delimFileName )
     }
-    ' | sort -z -t/ ${key1:+-k "$key1"} ${key2:+-k "$key2"} ${key3:+-k "$key3"} | tr -d '/'
+    ' | sort -z -t/ -k $key1 -k $key2 -k $key3 | tr -d '/'
 
     unset searchPaths
 }
