@@ -7,6 +7,6 @@ Actions=MakeSfz;
 X-KDE-AuthorizeAction=shell_access
  
 [Desktop Action MakeSfz]
-Exec=konsole --hold -e makesfz -I --service-menu -- %F
+Exec=konsole --hold -e makesfz -I --service-menu --files %F
 Icon=utilities-terminal
 Name=Make SFZ
