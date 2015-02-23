@@ -47,25 +47,25 @@
 <h1>
 <a id="makesfz" class="anchor" href="#makesfz" aria-hidden="true"><span class="octicon octicon-link"></span></a>makesfz</h1>
 
-<p>Inspired by danboid's original makesfz.sh script <a href="http://www.remastersys.com/forums/index.php?topic=1951.0">http://www.remastersys.com/forums/index.php?topic=1951.0</a></p>
+<p>Inspired by danboid's original makesfz.sh script <a href="http://geekconnection.org/remastersys/forums/index.php?topic=1951.0">http://geekconnection.org/remastersys/forums/index.php?topic=1951.0</a></p>
 
-<p>By default, running makesfz with no arguments creates individual SFZ files for every WAV file found in the current directory. Samples are mapped across the entire keyboard with pitch_keycenter set to MIDI key C4 (middle C).</p>
+<p>Running makesfz with no arguments creates individual SFZ files for every WAV file found in the current directory, with the key range spanning the entire keyboard and "pitch_keycenter" set to MIDI key C4 (middle C).</p>
 
-<p>Alternatively, running 'makesfz -s' creates a single SFZ file named after the current directory. Each WAV file found is mapped to its own MIDI key, by default starting at C4. The file name can be set with the -n option.</p>
-
-<p>The script allows a key range and the "key center" to be specified, a specific MIDI channel can be set, and WAV, FLAC, or OGG files can be used. Keys can be specified either by name (C-1 - G9, # or b allowed) or by MIDI key number (0 - 127).</p>
+<p>The script allows the key range and pitch_keycenter to be specified, a specific MIDI channel can be set, and WAV, FLAC, or OGG files can be used. Keys can be specified either by name (C-1 - G9, # or b allowed) or by MIDI key number (0 - 127).</p>
 
 <p>For example, to set a key range from C2 - C5:</p>
 
 <pre><code>makesfz --lk C2 --hk C5
 </code></pre>
 
+<p>Alternatively, running 'makesfz -s' creates a single SFZ file named after the current directory (the file name can be set with the -n option). In this mode, each WAV file found is assigned its own MIDI key, by default starting at C4.</p>
+
 <p>To create a single SFZ where the first sample starts on C3 and "one shot" is required:</p>
 
 <pre><code>makesfz -s -k C3 -1
 </code></pre>
 
-<p>Audio files can be treated as indiviual instruments or as instrument layers grouped either by sub-directory or by file name with numeric prefixes/suffixes indicating the layers.</p>
+<p>Audio files can be treated as individual instruments or as instrument layers grouped either by sub-directory or by file name with numeric prefixes/suffixes indicating the layers.</p>
 
 <p>For example, if the "layer marker" is set to "prefix":</p>
 
@@ -92,7 +92,7 @@
 
 <p>To scan for files grouped by sub-directory inside a directory use: </p>
 
-<pre><code>makesfz -L dirs --files 'dir_name'
+<pre><code>makesfz -L dirs --files 'parent_dir'
 </code></pre>
 
 <p>Options to reverse the sort order and to run the script in "interactive mode" are also available. To see the full list of options:</p>
@@ -109,7 +109,7 @@
 <h1>
 <a id="make-sfz" class="anchor" href="#make-sfz" aria-hidden="true"><span class="octicon octicon-link"></span></a>Make SFZ</h1>
 
-<p>This is a Nautilus script to invoke makesfz. Any selected files will be passed as arguments to makesfz.
+<p>This is a Nautilus script to invoke makesfz in interactive mode. Any selected files will be passed as arguments to makesfz.
 The script assumes that makesfz is installed in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin) and that xterm is available.</p>
 
 <p>Near the top of the script are variables that may be modified if you need to specify the file path of makesfz or if you wish to use a terminal emulator other than xterm:</p>
@@ -125,7 +125,7 @@ TERMINAL_COMMAND="xterm -hold -title MakeSFZ -font 9x15 -e"
 <h1>
 <a id="makesfzdesktop" class="anchor" href="#makesfzdesktop" aria-hidden="true"><span class="octicon octicon-link"></span></a>makesfz.desktop</h1>
 
-<p>KDE service menu .desktop file to invoke makesfz. It assumes that makesfz is installed in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin).</p>
+<p>KDE service menu .desktop file to invoke makesfz in interactive mode. It assumes that makesfz is installed in a directory included in the PATH environment variable (e.g. /usr/bin, /usr/local/bin).</p>
 
 <p>Place the .desktop file in one of the service menu directories, e.g. '/usr/share/services/ServiceMenus'.</p>
 
